@@ -19,7 +19,76 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// Resilient model fallback pool to guarantee uninterrupted quiz generation
+const CANDIDATE_MODELS = [
+  ...new Set(
+    [
+      process.env.GEMINI_MODEL,
+      "gemini-3.5-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-3.7-flash",
+      "gemini-3.8-flash",
+    ].filter(Boolean)
+  ),
+];
+
+async function generateContentWithFallback(prompt) {
+  let lastError = null;
+
+  for (let i = 0; i < CANDIDATE_MODELS.length; i++) {
+    const model = CANDIDATE_MODELS[i];
+    try {
+      console.log(`[Gemini] Attempting generation with model: ${model} (${i + 1}/${CANDIDATE_MODELS.length})`);
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+      });
+
+      if (response && response.text) {
+        console.log(`[Gemini] Successfully generated quiz with ${model}`);
+        return response;
+      }
+    } catch (err) {
+      lastError = err;
+      const status =
+        err?.status ||
+        err?.code ||
+        (err?.error && err.error.code) ||
+        (err?.response && err.response.status);
+
+      const errString = String(err?.message || JSON.stringify(err));
+      console.warn(`[Gemini] Model ${model} encountered issue (${status}): ${errString.slice(0, 140)}`);
+
+      // 503 high demand or 429 rate limit
+      if (
+        status === 503 ||
+        status === 429 ||
+        errString.includes("503") ||
+        errString.includes("high demand") ||
+        errString.includes("RESOURCE_EXHAUSTED")
+      ) {
+        console.log(`[Gemini] ${model} is experiencing high demand. Seamlessly falling back to next model...`);
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        continue;
+      }
+
+      // 404 model unavailable or retired
+      if (status === 404 || errString.includes("404") || errString.includes("not found")) {
+        continue;
+      }
+
+      continue;
+    }
+  }
+
+  const errText = String(lastError?.message || "");
+  if (errText.includes("503") || errText.includes("high demand")) {
+    throw new Error(
+      "AI model servers are currently experiencing temporary high demand across all clusters. Please try again in a moment."
+    );
+  }
+  throw new Error(lastError?.message || "Failed to generate quiz from AI.");
+}
 
 // --------------------------------------------------
 // Helpers
@@ -237,14 +306,7 @@ Study Material:
 ${materialText.slice(0, 35000)}
 `;
 
-    console.log("Calling Gemini model:", GEMINI_MODEL);
-
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: prompt,
-    });
-
-    console.log("Gemini response received.");
+    const response = await generateContentWithFallback(prompt);
 
     const generated = parseJsonResponse(response.text);
 
