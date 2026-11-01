@@ -1,0 +1,126 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap");
+
+:root {
+  /* Pastel Design System Colors */
+  --bg-main: #F8F7FC;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #F4F1FA;
+  
+  --lavender: #EAE4F8;
+  --purple-pastel: #DCD0F2;
+  --purple-primary: #7E69AB;
+  --purple-hover: #6D579B;
+  --purple-light: #F3EFFB;
+  
+  --blue-soft: #E3EDF9;
+  --blue-accent: #5D8EC7;
+  
+  --pink-pastel: #F8E5ED;
+  --pink-accent: #C86987;
+  
+  --mint-soft: #E3F1E9;
+  --mint-accent: #458B68;
+  
+  --cream-warm: #FBF4E8;
+  --peach-accent: #C7824E;
+  
+  --text-primary: #343247;
+  --text-secondary: #77758A;
+  --text-muted: #9E9CAA;
+  
+  --border-light: #ECEAF2;
+  --border-subtle: #E2DFEC;
+  
+  /* Status Colors */
+  --success-bg: #E3F1E9;
+  --success-text: #2D6A4F;
+  --success-border: #C8E6D5;
+  
+  --warning-bg: #FBF4E8;
+  --warning-text: #A75D28;
+  --warning-border: #F4DFB8;
+  
+  --error-bg: #F8E5ED;
+  --error-text: #B43E5E;
+  --error-border: #F2C7D7;
+  
+  /* Shadows & Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+  
+  --shadow-sm: 0 2px 6px rgba(52, 50, 71, 0.04);
+  --shadow-md: 0 4px 14px rgba(52, 50, 71, 0.06);
+  --shadow-lg: 0 10px 25px rgba(52, 50, 71, 0.08);
+  
+  --font-main: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Poppins", "Inter", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100vh;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: all 0.2s ease;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F0EDF7;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D4CDDF;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B6ADC5;
+}
