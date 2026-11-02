@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   Sparkles,
   BookOpen,
@@ -21,9 +21,9 @@ export default function GenerateQuizView({
   const [materialId, setMaterialId] = useState(
     selectedMaterialId || (materials[0]?._id ?? "")
   );
-  const [questionCount, setQuestionCount] = useState("5");
-  const [difficulty, setDifficulty] = useState("medium");
-  const [questionType, setQuestionType] = useState("multiple_choice");
+  const [questionCount, setQuestionCount] = useState(() => localStorage.getItem("quizcraft_default_count") || "5");
+  const [difficulty, setDifficulty] = useState(() => localStorage.getItem("quizcraft_default_difficulty") || "medium");
+  const [questionType, setQuestionType] = useState(() => localStorage.getItem("quizcraft_default_type") || "multiple_choice");
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -278,13 +278,13 @@ export default function GenerateQuizView({
               <h4>Active Session Rules</h4>
             </div>
             <p className="guide-tip">
-              • Navigate freely between questions before submitting.
+              â€¢ Navigate freely between questions before submitting.
             </p>
             <p className="guide-tip">
-              • Use <strong>Mark for Review</strong> to flag challenging questions.
+              â€¢ Use <strong>Mark for Review</strong> to flag challenging questions.
             </p>
             <p className="guide-tip">
-              • The quiz automatically submits when the countdown timer ends.
+              â€¢ The quiz automatically submits when the countdown timer ends.
             </p>
           </div>
         </aside>

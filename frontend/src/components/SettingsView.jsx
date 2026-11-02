@@ -1,10 +1,8 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   User,
-  Cpu,
-  Database,
+  Sliders,
   CheckCircle2,
-  Palette,
   ShieldCheck,
   Sparkles,
   Lock,
@@ -12,16 +10,43 @@ import {
   Calendar,
   LogOut,
   Key,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  Database,
+  Cpu,
+  Layers,
+  FileText,
 } from "lucide-react";
 import { updateUserProfile } from "../services/api";
 
 export default function SettingsView({ user, onUpdateUser, onLogout, onShowToast }) {
+  // Profile state
   const [name, setName] = useState(user?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  // User Study Preferences
   const [preferredDifficulty, setPreferredDifficulty] = useState(
     () => localStorage.getItem("quizcraft_default_difficulty") || "medium"
   );
+  const [preferredCount, setPreferredCount] = useState(
+    () => localStorage.getItem("quizcraft_default_count") || "5"
+  );
+  const [preferredType, setPreferredType] = useState(
+    () => localStorage.getItem("quizcraft_default_type") || "multiple_choice"
+  );
+  const [autoSubmit, setAutoSubmit] = useState(
+    () => localStorage.getItem("quizcraft_auto_submit") !== "false"
+  );
+  const [timerWarning, setTimerWarning] = useState(
+    () => localStorage.getItem("quizcraft_timer_warning") !== "false"
+  );
+
+  // Architecture panel collapsed by default
+  const [showTechSpecs, setShowTechSpecs] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -49,7 +74,12 @@ export default function SettingsView({ user, onUpdateUser, onLogout, onShowToast
     setLoading(true);
 
     try {
+      // Save study preferences locally
       localStorage.setItem("quizcraft_default_difficulty", preferredDifficulty);
+      localStorage.setItem("quizcraft_default_count", preferredCount);
+      localStorage.setItem("quizcraft_default_type", preferredType);
+      localStorage.setItem("quizcraft_auto_submit", String(autoSubmit));
+      localStorage.setItem("quizcraft_timer_warning", String(timerWarning));
 
       const payload = { name: name.trim() };
       if (newPassword) {
@@ -67,7 +97,7 @@ export default function SettingsView({ user, onUpdateUser, onLogout, onShowToast
       setCurrentPassword("");
       setNewPassword("");
       if (onShowToast) {
-        onShowToast("Profile updated successfully!", "success");
+        onShowToast("Profile and study preferences updated successfully!", "success");
       }
       setTimeout(() => setSavedSuccess(false), 3000);
     } catch (err) {
@@ -95,200 +125,295 @@ export default function SettingsView({ user, onUpdateUser, onLogout, onShowToast
 
   return (
     <div className="settings-container">
-      <div className="settings-cards-grid">
-        {/* User Account & Profile Card */}
-        <section className="settings-card">
-          <div className="settings-card-header">
-            <div
-              className="settings-icon-wrapper"
-              style={{
-                backgroundColor: "var(--lavender)",
-                color: "var(--purple-primary)",
-              }}
-            >
-              <User size={20} />
-            </div>
-            <div>
-              <h3>User Profile & Account Access</h3>
-              <p>Manage your login credentials and personal workspace details</p>
-            </div>
-          </div>
-
-          <div className="user-profile-badge-card">
-            <div className="large-avatar-initial">{initial}</div>
-            <div className="profile-badge-info">
-              <h4>{user?.name || "Student Learner"}</h4>
-              <p className="profile-email-badge">
-                <Mail size={13} /> {user?.email || "student@quizcraft.ai"}
-              </p>
-              <span className="profile-joined-date">
-                <Calendar size={12} /> Member since {formatDate(user?.createdAt)}
-              </span>
-            </div>
-          </div>
-
-          {errorMessage && (
-            <div className="auth-error-box" style={{ marginBottom: "16px" }}>
-              <span>{errorMessage}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSaveProfile} className="settings-form">
-            <div className="form-group">
-              <label htmlFor="student-name">Display Full Name</label>
-              <input
-                id="student-name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={60}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="pref-difficulty">Default Difficulty Preference</label>
-              <select
-                id="pref-difficulty"
-                value={preferredDifficulty}
-                onChange={(e) => setPreferredDifficulty(e.target.value)}
+      <form onSubmit={handleSaveProfile}>
+        <div className="settings-cards-grid">
+          {/* Card 1: User Profile & Account Settings */}
+          <section className="settings-card">
+            <div className="settings-card-header">
+              <div
+                className="settings-icon-wrapper"
+                style={{
+                  backgroundColor: "var(--lavender)",
+                  color: "var(--purple-primary)",
+                }}
               >
-                <option value="easy">Easy (Foundations)</option>
-                <option value="medium">Medium (Standard)</option>
-                <option value="hard">Hard (Advanced Analytics)</option>
-              </select>
+                <User size={20} />
+              </div>
+              <div>
+                <h3>User Profile & Account</h3>
+                <p>Manage your account identity and login credentials</p>
+              </div>
             </div>
 
-            <div className="password-change-section">
-              <span className="sub-section-title">
-                <Key size={15} /> Change Password (Optional)
-              </span>
+            <div className="user-profile-badge-card">
+              <div className="large-avatar-initial">{initial}</div>
+              <div className="profile-badge-info">
+                <h4>{user?.name || "Student Learner"}</h4>
+                <p className="profile-email-badge">
+                  <Mail size={13} /> {user?.email || "student@quizcraft.ai"}
+                </p>
+                <span className="profile-joined-date">
+                  <Calendar size={12} /> Member since {formatDate(user?.createdAt)}
+                </span>
+              </div>
+            </div>
 
-              <div className="form-group" style={{ marginTop: "10px" }}>
-                <label htmlFor="cur-password">Current Password</label>
+            {errorMessage && (
+              <div className="auth-error-box" style={{ marginBottom: "16px" }}>
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
+            <div className="settings-form">
+              <div className="form-group">
+                <label htmlFor="student-name">Display Full Name</label>
                 <input
-                  id="cur-password"
-                  type="password"
-                  placeholder="Enter current password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  autoComplete="current-password"
+                  id="student-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  maxLength={60}
+                  required
                 />
+              </div>
+
+              <div className="password-change-section">
+                <span className="sub-section-title">
+                  <Key size={15} /> Change Password (Optional)
+                </span>
+
+                <div className="form-group" style={{ marginTop: "10px" }}>
+                  <label htmlFor="cur-password">Current Password</label>
+                  <input
+                    id="cur-password"
+                    type="password"
+                    placeholder="Enter current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="new-password">New Password (Min. 6 characters)</label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+
+              <div className="settings-actions-footer">
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <div className="btn-spinner"></div> Saving Changes...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={16} /> Save Profile Settings
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-logout-settings"
+                  onClick={onLogout}
+                >
+                  <LogOut size={16} /> Log Out
+                </button>
+              </div>
+
+              {savedSuccess && (
+                <span className="save-confirm-text">✓ Profile and preferences saved!</span>
+              )}
+            </div>
+          </section>
+
+          {/* Card 2: Study & Assessment Preferences */}
+          <section className="settings-card">
+            <div className="settings-card-header">
+              <div
+                className="settings-icon-wrapper"
+                style={{
+                  backgroundColor: "var(--mint-soft)",
+                  color: "var(--mint-accent)",
+                }}
+              >
+                <Sliders size={20} />
+              </div>
+              <div>
+                <h3>Study & Quiz Preferences</h3>
+                <p>Customize your default quiz generation and assessment flow</p>
+              </div>
+            </div>
+
+            <div className="settings-form">
+              <div className="form-group">
+                <label htmlFor="pref-difficulty">Default Difficulty Level</label>
+                <select
+                  id="pref-difficulty"
+                  value={preferredDifficulty}
+                  onChange={(e) => setPreferredDifficulty(e.target.value)}
+                >
+                  <option value="easy">Easy (Foundational Concepts)</option>
+                  <option value="medium">Medium (Standard Assessment)</option>
+                  <option value="hard">Hard (Deep Critical Thinking)</option>
+                </select>
               </div>
 
               <div className="form-group">
-                <label htmlFor="new-password">New Password (Min. 6 chars)</label>
-                <input
-                  id="new-password"
-                  type="password"
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
+                <label htmlFor="pref-count">Default Question Count</label>
+                <select
+                  id="pref-count"
+                  value={preferredCount}
+                  onChange={(e) => setPreferredCount(e.target.value)}
+                >
+                  <option value="5">5 Questions (Quick Review)</option>
+                  <option value="10">10 Questions (Standard Practice)</option>
+                  <option value="15">15 Questions (Full Test)</option>
+                  <option value="20">20 Questions (Comprehensive Exam)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="pref-type">Preferred Question Format</label>
+                <select
+                  id="pref-type"
+                  value={preferredType}
+                  onChange={(e) => setPreferredType(e.target.value)}
+                >
+                  <option value="multiple_choice">Multiple Choice (4 Options)</option>
+                  <option value="true_false">True / False</option>
+                  <option value="fill_in_the_blank">Fill in the Blanks</option>
+                  <option value="mixed">Mixed Formats</option>
+                </select>
+              </div>
+
+              <div className="pref-checkbox-group">
+                <label className="pref-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={autoSubmit}
+                    onChange={(e) => setAutoSubmit(e.target.checked)}
+                  />
+                  <div>
+                    <span className="pref-checkbox-title">Auto-Submit on Timer Expiry</span>
+                    <span className="pref-checkbox-desc">
+                      Automatically submit your quiz when the countdown timer hits 00:00.
+                    </span>
+                  </div>
+                </label>
+
+                <label className="pref-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={timerWarning}
+                    onChange={(e) => setTimerWarning(e.target.checked)}
+                  />
+                  <div>
+                    <span className="pref-checkbox-title">1-Minute Remaining Alert</span>
+                    <span className="pref-checkbox-desc">
+                      Highlight timer in soft peach when less than 60 seconds remain.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* User-facing Privacy & Security Assurance */}
+              <div className="privacy-assurance-card">
+                <div className="privacy-badge-icon">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <h4>Private & Protected Workspace</h4>
+                  <p>
+                    All uploaded notes, PDFs, quizzes, bookmarks, and quiz attempts are strictly private to your account.
+                  </p>
+                </div>
               </div>
             </div>
+          </section>
+        </div>
+      </form>
 
-            <div className="settings-actions-footer">
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <div className="btn-spinner"></div> Saving Changes...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={16} /> Save Profile Settings
-                  </>
-                )}
-              </button>
+      {/* Collapsible Architecture & Project Info (For Academic / Viva Review) */}
+      <div className="tech-specs-accordion">
+        <button
+          type="button"
+          className="tech-specs-toggle-btn"
+          onClick={() => setShowTechSpecs(!showTechSpecs)}
+          aria-expanded={showTechSpecs}
+        >
+          <div className="tech-specs-toggle-label">
+            <Info size={16} />
+            <span>Technical Architecture & Specifications (Academic Review / Viva)</span>
+          </div>
+          {showTechSpecs ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
 
-              <button
-                type="button"
-                className="btn-logout-settings"
-                onClick={onLogout}
-              >
-                <LogOut size={16} /> Log Out
-              </button>
-            </div>
+        {showTechSpecs && (
+          <div className="tech-specs-content">
+            <div className="tech-specs-grid">
+              <div className="tech-spec-item">
+                <div className="tech-spec-icon"><ShieldCheck size={16} /></div>
+                <div>
+                  <strong>User Access & Privacy</strong>
+                  <p>Per-user data isolation with signed JWT bearer tokens.</p>
+                </div>
+              </div>
 
-            {savedSuccess && (
-              <span className="save-confirm-text">✓ Profile saved successfully!</span>
-            )}
-          </form>
-        </section>
+              <div className="tech-spec-item">
+                <div className="tech-spec-icon"><Lock size={16} /></div>
+                <div>
+                  <strong>Password Security</strong>
+                  <p>bcrypt 10-round salted password hashing.</p>
+                </div>
+              </div>
 
-        {/* AI & System Integration Status Card */}
-        <section className="settings-card">
-          <div className="settings-card-header">
-            <div
-              className="settings-icon-wrapper"
-              style={{
-                backgroundColor: "var(--mint-soft)",
-                color: "var(--mint-accent)",
-              }}
-            >
-              <Cpu size={20} />
-            </div>
-            <div>
-              <h3>Security & Architecture</h3>
-              <p>User data isolation and AI system status</p>
+              <div className="tech-spec-item">
+                <div className="tech-spec-icon"><Sparkles size={16} /></div>
+                <div>
+                  <strong>AI Generation Engine</strong>
+                  <p>Google Gemini API with multi-model fallback pool (gemini-3.5-flash / lite / 3.7).</p>
+                </div>
+              </div>
+
+              <div className="tech-spec-item">
+                <div className="tech-spec-icon"><FileText size={16} /></div>
+                <div>
+                  <strong>Document Extraction</strong>
+                  <p>pdf-parse (PDF documents) & mammoth (DOCX documents).</p>
+                </div>
+              </div>
+
+              <div className="tech-spec-item">
+                <div className="tech-spec-icon"><Database size={16} /></div>
+                <div>
+                  <strong>Database Architecture</strong>
+                  <p>MongoDB Mongoose ODM with user-filtered collections.</p>
+                </div>
+              </div>
+
+              <div className="tech-spec-item">
+                <div className="tech-spec-icon"><Layers size={16} /></div>
+                <div>
+                  <strong>Frontend Architecture</strong>
+                  <p>React 18, Vite, Lucide Icons with custom soft pastel study theme.</p>
+                </div>
+              </div>
             </div>
           </div>
-
-          <div className="system-status-list">
-            <div className="system-status-row">
-              <div className="status-label-group">
-                <ShieldCheck size={16} style={{ color: "var(--mint-accent)" }} />
-                <span>Account Access</span>
-              </div>
-              <span className="status-badge-active">Private User Isolation (Active)</span>
-            </div>
-
-            <div className="system-status-row">
-              <div className="status-label-group">
-                <Lock size={16} style={{ color: "var(--purple-primary)" }} />
-                <span>Password Encryption</span>
-              </div>
-              <span className="status-badge-active">bcrypt Salted Hash</span>
-            </div>
-
-            <div className="system-status-row">
-              <div className="status-label-group">
-                <Key size={16} style={{ color: "var(--blue-accent)" }} />
-                <span>API Authorization</span>
-              </div>
-              <span className="status-badge-active">JWT Bearer Tokens</span>
-            </div>
-
-            <div className="system-status-row">
-              <div className="status-label-group">
-                <Sparkles size={16} style={{ color: "var(--purple-primary)" }} />
-                <span>AI Model</span>
-              </div>
-              <span className="status-badge-active">Google Gemini 3.8 Flash</span>
-            </div>
-
-            <div className="system-status-row">
-              <div className="status-label-group">
-                <Database size={16} style={{ color: "var(--mint-accent)" }} />
-                <span>Database</span>
-              </div>
-              <span className="status-badge-active">MongoDB (User-Filtered Collections)</span>
-            </div>
-
-            <div className="system-status-row">
-              <div className="status-label-group">
-                <Palette size={16} style={{ color: "var(--peach-accent)" }} />
-                <span>Theme Design</span>
-              </div>
-              <span className="theme-tag">Soft Pastel Study Theme</span>
-            </div>
-          </div>
-        </section>
+        )}
       </div>
     </div>
   );
