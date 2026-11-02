@@ -1,4 +1,4 @@
-require("dotenv").config();
+﻿require("dotenv").config();
 const http = require("http");
 const mongoose = require("mongoose");
 const app = require("./server");
@@ -220,7 +220,7 @@ async function runAuthIsolationTests() {
 }
 
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect((process.env.MONGODB_URI || process.env.MONGO_URI))
   .then(() => {
     runAuthIsolationTests();
   })
