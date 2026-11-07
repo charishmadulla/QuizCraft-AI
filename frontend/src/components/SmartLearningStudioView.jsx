@@ -15,8 +15,10 @@ import {
   HelpCircle,
   BookOpen,
   ChevronRight,
-  Eye,
   Info,
+  Compass,
+  Zap,
+  Target,
 } from "lucide-react";
 import {
   generateSummary,
@@ -45,7 +47,8 @@ export default function SmartLearningStudioView({
   const [simplifiedData, setSimplifiedData] = useState(null);
   const [visualData, setVisualData] = useState(null);
 
-  // Loading & error states
+  // Loading & interactive states
+  const [loadingAll, setLoadingAll] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingSimplify, setLoadingSimplify] = useState(false);
   const [loadingVisual, setLoadingVisual] = useState(false);
@@ -56,11 +59,26 @@ export default function SmartLearningStudioView({
 
   const selectedMaterial = materials.find((m) => m._id === currentMaterialId);
 
-  // Load existing data when material changes
+  // Sync selectedMaterialId prop when it changes
+  useEffect(() => {
+    if (selectedMaterialId) {
+      setCurrentMaterialId(selectedMaterialId);
+    }
+  }, [selectedMaterialId]);
+
+  // Load existing data when active material changes
   useEffect(() => {
     if (!currentMaterialId) return;
 
     let isMounted = true;
+
+    // Reset previous material data so old data does not linger
+    setSummaryData(null);
+    setSimplifiedData(null);
+    setVisualData(null);
+    setActiveFlashcardIndex(0);
+    setIsFlipped(false);
+
     async function loadMaterialData() {
       try {
         const assets = await getLearningAssets(currentMaterialId);
@@ -78,7 +96,7 @@ export default function SmartLearningStudioView({
         const sum = await getSummaryById(currentMaterialId);
         if (isMounted && sum) {
           setSummaryData(sum);
-          if (sum.simplifiedExplanation) {
+          if (sum.simplifiedExplanation && !simplifiedData) {
             setSimplifiedData(sum.simplifiedExplanation);
           }
         }
@@ -92,6 +110,35 @@ export default function SmartLearningStudioView({
       isMounted = false;
     };
   }, [currentMaterialId]);
+
+  // Generate All Studio Materials in one go
+  const handleGenerateAll = async () => {
+    if (!currentMaterialId) return;
+    setLoadingAll(true);
+    try {
+      const [sumRes, visRes] = await Promise.all([
+        generateSummary({ materialId: currentMaterialId, summaryLevel }),
+        generateVisualLearning({ materialId: currentMaterialId }),
+      ]);
+
+      if (sumRes?.summary) setSummaryData(sumRes.summary);
+      if (visRes?.data) {
+        setVisualData(visRes.data);
+        setActiveFlashcardIndex(0);
+        setIsFlipped(false);
+      }
+
+      if (onShowToast) {
+        onShowToast("Complete AI Study Suite generated successfully!", "success");
+      }
+    } catch (err) {
+      if (onShowToast) {
+        onShowToast(err.message || "Failed to generate complete learning suite.", "error");
+      }
+    } finally {
+      setLoadingAll(false);
+    }
+  };
 
   // Handle Summary Generation
   const handleGenerateSummary = async (level = summaryLevel) => {
@@ -133,7 +180,7 @@ export default function SmartLearningStudioView({
     }
   };
 
-  // Handle Visual Learning
+  // Handle Visual Learning (Mind Map, Flowchart, Comparison, Charts, Flashcards)
   const handleGenerateVisualLearning = async () => {
     if (!currentMaterialId) return;
     setLoadingVisual(true);
@@ -143,7 +190,7 @@ export default function SmartLearningStudioView({
         setVisualData(res.data);
         setActiveFlashcardIndex(0);
         setIsFlipped(false);
-        if (onShowToast) onShowToast("Visual learning diagrams & flashcards generated!", "success");
+        if (onShowToast) onShowToast("Visual learning materials generated!", "success");
       }
     } catch (err) {
       if (onShowToast) onShowToast(err.message || "Failed to generate visual learning.", "error");
@@ -189,7 +236,7 @@ ${summaryData.rawSummary}
     const element = document.createElement("a");
     const file = new Blob([content], { type: "text/plain" });
     element.href = URL.createObjectURL(file);
-    element.download = `${summaryData.sourceTitle.replace(/\s+/g, "_")}_summary.txt`;
+    element.download = `${summaryData.sourceTitle?.replace(/\s+/g, "_") || "study"}_summary.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -197,11 +244,11 @@ ${summaryData.rawSummary}
 
   if (materials.length === 0) {
     return (
-      <div className="empty-state-card" style={{ padding: "60px 20px", textAlign: "center" }}>
-        <BookOpen size={48} style={{ color: "var(--purple-primary)", marginBottom: "16px" }} />
-        <h3>No Study Materials Found</h3>
-        <p style={{ color: "var(--text-secondary)", marginBottom: "20px" }}>
-          Upload a PDF, Word document, or paste lecture notes first to unlock Smart Learning Studio.
+      <div className="studio-empty-hero">
+        <BookOpen size={48} className="empty-hero-icon" />
+        <h2>No Study Materials Found</h2>
+        <p>
+          Upload a PDF, Word document, or paste lecture notes first to unlock the Smart Learning Studio.
         </p>
         <button type="button" className="btn-primary" onClick={onNavigateToUpload}>
           Upload Study Material
@@ -210,140 +257,203 @@ ${summaryData.rawSummary}
     );
   }
 
+  const hasAnyData = summaryData || visualData;
+
   return (
-    <div className="learning-studio-container">
-      {/* Studio Header & Material Selector */}
-      <div className="studio-top-bar">
-        <div className="studio-material-picker">
-          <label htmlFor="studio-mat-select">
-            <BookOpen size={16} /> Active Study Material:
-          </label>
-          <select
-            id="studio-mat-select"
-            value={currentMaterialId}
-            onChange={(e) => setCurrentMaterialId(e.target.value)}
-          >
-            {materials.map((m) => (
-              <option key={m._id} value={m._id}>
-                {m.title} ({m.sourceType === "pdf" ? "PDF" : m.sourceType === "docx" ? "Word" : "Notes"})
-              </option>
-            ))}
-          </select>
+    <div className="studio-main-container">
+      {/* Top Header Card */}
+      <div className="studio-hero-header">
+        <div className="studio-hero-title-group">
+          <div className="studio-badge-row">
+            <span className="studio-pill-badge">
+              <Sparkles size={14} /> AI KNOWLEDGE HUB
+            </span>
+            <span className="studio-doc-badge">
+              {selectedMaterial?.sourceType === "pdf" ? "PDF Document" : selectedMaterial?.sourceType === "docx" ? "Word Document" : "Study Notes"}
+            </span>
+          </div>
+          <h1>Smart Learning Studio</h1>
+          <p>
+            Multi-modal learning suite — Structured summaries, Feynman explanations, conceptual mind maps, process flowcharts, comparison matrices, and flashcards.
+          </p>
         </div>
 
-        <div className="studio-quick-actions">
-          {onGenerateQuizForMaterial && (
+        {/* Material Selector & Actions */}
+        <div className="studio-hero-controls">
+          <div className="studio-select-wrapper">
+            <label htmlFor="studio-mat-select">
+              <BookOpen size={15} /> Active Material:
+            </label>
+            <select
+              id="studio-mat-select"
+              value={currentMaterialId}
+              onChange={(e) => setCurrentMaterialId(e.target.value)}
+              className="studio-material-dropdown"
+            >
+              {materials.map((m) => (
+                <option key={m._id} value={m._id}>
+                  {m.title} ({m.sourceType === "pdf" ? "PDF" : m.sourceType === "docx" ? "DOCX" : "Notes"})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="studio-hero-buttons">
             <button
               type="button"
-              className="btn-secondary"
-              onClick={() => onGenerateQuizForMaterial(currentMaterialId)}
+              className="btn-studio-generate-all"
+              onClick={handleGenerateAll}
+              disabled={loadingAll || loadingSummary || loadingVisual}
+              title="Generate summary, diagrams, and flashcards all at once"
             >
-              <Sparkles size={15} /> Generate Quiz
+              {loadingAll ? (
+                <>
+                  <div className="btn-spinner"></div> Generating Complete Suite...
+                </>
+              ) : (
+                <>
+                  <Zap size={16} /> {hasAnyData ? "Regenerate All AI Assets" : "Generate Complete AI Suite"}
+                </>
+              )}
             </button>
-          )}
+
+            {onGenerateQuizForMaterial && (
+              <button
+                type="button"
+                className="btn-studio-quiz"
+                onClick={() => onGenerateQuizForMaterial(currentMaterialId)}
+              >
+                <Target size={15} /> Practice Quiz
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs */}
-      <div className="studio-nav-tabs">
+      {/* Modern Navigation Dock (Subtabs) */}
+      <nav className="studio-tabs-dock" aria-label="Learning Studio Tabs">
         <button
           type="button"
-          className={`studio-tab-btn ${activeSubTab === "summary" ? "active" : ""}`}
+          className={`studio-dock-tab ${activeSubTab === "summary" ? "dock-tab-active" : ""}`}
           onClick={() => setActiveSubTab("summary")}
         >
-          <FileText size={16} /> Structured Summary
+          <FileText size={16} />
+          <span>Structured Summary</span>
+          {summaryData && <span className="tab-ready-dot" title="Ready"></span>}
         </button>
+
         <button
           type="button"
-          className={`studio-tab-btn ${activeSubTab === "simplify" ? "active" : ""}`}
+          className={`studio-dock-tab ${activeSubTab === "simplify" ? "dock-tab-active" : ""}`}
           onClick={() => setActiveSubTab("simplify")}
         >
-          <Lightbulb size={16} /> Simple Explanation
+          <Lightbulb size={16} />
+          <span>Simple Explanation</span>
+          {simplifiedData && <span className="tab-ready-dot" title="Ready"></span>}
         </button>
+
         <button
           type="button"
-          className={`studio-tab-btn ${activeSubTab === "mindmap" ? "active" : ""}`}
+          className={`studio-dock-tab ${activeSubTab === "mindmap" ? "dock-tab-active" : ""}`}
           onClick={() => setActiveSubTab("mindmap")}
         >
-          <GitFork size={16} /> Mind Map
+          <GitFork size={16} />
+          <span>Mind Map</span>
+          {visualData?.mindMapData && <span className="tab-ready-dot" title="Ready"></span>}
         </button>
+
         <button
           type="button"
-          className={`studio-tab-btn ${activeSubTab === "flowchart" ? "active" : ""}`}
+          className={`studio-dock-tab ${activeSubTab === "flowchart" ? "dock-tab-active" : ""}`}
           onClick={() => setActiveSubTab("flowchart")}
         >
-          <ArrowRight size={16} /> Flowchart
+          <ArrowRight size={16} />
+          <span>Flowchart</span>
+          {visualData?.flowchartData && <span className="tab-ready-dot" title="Ready"></span>}
         </button>
+
         <button
           type="button"
-          className={`studio-tab-btn ${activeSubTab === "comparison" ? "active" : ""}`}
+          className={`studio-dock-tab ${activeSubTab === "comparison" ? "dock-tab-active" : ""}`}
           onClick={() => setActiveSubTab("comparison")}
         >
-          <Table size={16} /> Comparison Tables
+          <Table size={16} />
+          <span>Comparison Tables</span>
+          {visualData?.comparisonTables && <span className="tab-ready-dot" title="Ready"></span>}
         </button>
+
         <button
           type="button"
-          className={`studio-tab-btn ${activeSubTab === "charts" ? "active" : ""}`}
+          className={`studio-dock-tab ${activeSubTab === "charts" ? "dock-tab-active" : ""}`}
           onClick={() => setActiveSubTab("charts")}
         >
-          <BarChart2 size={16} /> Charts & Data
+          <BarChart2 size={16} />
+          <span>Charts & Data</span>
+          {visualData?.chartsData && <span className="tab-ready-dot" title="Ready"></span>}
         </button>
+
         <button
           type="button"
-          className={`studio-tab-btn ${activeSubTab === "flashcards" ? "active" : ""}`}
+          className={`studio-dock-tab ${activeSubTab === "flashcards" ? "dock-tab-active" : ""}`}
           onClick={() => setActiveSubTab("flashcards")}
         >
-          <Layers size={16} /> Flashcards
+          <Layers size={16} />
+          <span>Flashcards</span>
+          {visualData?.flashcards?.length > 0 && <span className="tab-ready-dot" title="Ready"></span>}
         </button>
-      </div>
+      </nav>
 
       {/* TAB 1: STRUCTURED SUMMARY */}
       {activeSubTab === "summary" && (
-        <div className="studio-tab-content">
-          <div className="studio-control-banner">
-            <div className="level-selector-group">
-              <span className="control-label">Summary Depth:</span>
-              {["short", "medium", "detailed"].map((lvl) => (
-                <button
-                  key={lvl}
-                  type="button"
-                  className={`level-btn ${summaryLevel === lvl ? "active" : ""}`}
-                  onClick={() => {
-                    setSummaryLevel(lvl);
-                    handleGenerateSummary(lvl);
-                  }}
-                  disabled={loadingSummary}
-                >
-                  {lvl.charAt(0).toUpperCase() + lvl.slice(1)}
-                </button>
-              ))}
+        <div className="studio-tab-view">
+          <div className="studio-action-toolbar">
+            <div className="depth-segmented-control">
+              <span className="toolbar-label">Summary Depth:</span>
+              <div className="segmented-group">
+                {["short", "medium", "detailed"].map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    className={`segmented-pill ${summaryLevel === lvl ? "pill-active" : ""}`}
+                    onClick={() => {
+                      setSummaryLevel(lvl);
+                      handleGenerateSummary(lvl);
+                    }}
+                    disabled={loadingSummary}
+                  >
+                    {lvl.charAt(0).toUpperCase() + lvl.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="control-actions-group">
+            <div className="toolbar-buttons-group">
               <button
                 type="button"
-                className="btn-studio-action"
+                className="btn-toolbar-action"
                 onClick={() => handleGenerateSummary(summaryLevel)}
                 disabled={loadingSummary}
               >
                 <RotateCw size={14} className={loadingSummary ? "spin-icon" : ""} />
-                {summaryData ? "Regenerate" : "Generate Summary"}
+                <span>{summaryData ? "Regenerate" : "Generate Summary"}</span>
               </button>
               {summaryData && (
                 <>
                   <button
                     type="button"
-                    className="btn-studio-action"
+                    className="btn-toolbar-action"
                     onClick={() => copyToClipboard(summaryData.rawSummary, "summary")}
                   >
-                    <Copy size={14} /> {copiedSection === "summary" ? "Copied!" : "Copy"}
+                    <Copy size={14} />
+                    <span>{copiedSection === "summary" ? "Copied!" : "Copy Text"}</span>
                   </button>
                   <button
                     type="button"
-                    className="btn-studio-action"
+                    className="btn-toolbar-action"
                     onClick={downloadSummaryText}
                   >
-                    <Download size={14} /> Download
+                    <Download size={14} />
+                    <span>Download TXT</span>
                   </button>
                 </>
               )}
@@ -351,59 +461,67 @@ ${summaryData.rawSummary}
           </div>
 
           {loadingSummary && (
-            <div className="studio-loading-box">
+            <div className="studio-card-loading">
               <div className="btn-spinner large"></div>
-              <h4>Analyzing and Summarizing Material...</h4>
-              <p>Applying transformer summarization pipeline to extract grounded concepts.</p>
+              <h4>Analyzing & Summarizing Study Text...</h4>
+              <p>Applying transformer summarization pipeline with chunking and overlap verification.</p>
             </div>
           )}
 
           {!loadingSummary && !summaryData && (
-            <div className="studio-prompt-box">
-              <FileText size={40} style={{ color: "var(--purple-primary)" }} />
-              <h3>Ready to Generate Structured Summary</h3>
-              <p>Select your preferred depth (Short, Medium, or Detailed) to generate grounded academic notes.</p>
+            <div className="studio-prompt-card">
+              <div className="prompt-card-icon-wrapper">
+                <FileText size={36} />
+              </div>
+              <h3>Generate Structured AI Summary</h3>
+              <p>Extract core concepts, key definitions, illustrative examples, and grounded conclusions.</p>
               <button
                 type="button"
                 className="btn-primary"
                 onClick={() => handleGenerateSummary(summaryLevel)}
               >
-                <Sparkles size={16} /> Generate {summaryLevel.toUpperCase()} Summary
+                <Sparkles size={16} /> Generate {summaryLevel.toUpperCase()} Summary Now
               </button>
             </div>
           )}
 
           {!loadingSummary && summaryData && (
-            <div className="summary-structured-grid">
-              <div className="summary-section-card topic-card">
-                <span className="summary-badge">Core Topic</span>
+            <div className="summary-cards-stack">
+              {/* Core Topic Card */}
+              <div className="summary-hero-card">
+                <span className="summary-kicker-badge">MAIN TOPIC</span>
                 <h2>{summaryData.mainTopic || selectedMaterial?.title}</h2>
-                <p className="summary-intro-text">{summaryData.introduction}</p>
+                <p className="summary-intro-paragraph">{summaryData.introduction}</p>
               </div>
 
+              {/* Key Points */}
               {summaryData.keyPoints?.length > 0 && (
-                <div className="summary-section-card">
-                  <div className="section-card-title">
-                    <CheckCircle2 size={18} style={{ color: "var(--mint-accent)" }} />
-                    <h3>Key Points</h3>
+                <div className="summary-content-block">
+                  <div className="block-header">
+                    <CheckCircle2 size={20} className="icon-mint" />
+                    <h3>Important Takeaways</h3>
                   </div>
-                  <ul className="key-points-list">
+                  <ul className="key-points-checklist">
                     {summaryData.keyPoints.map((kp, idx) => (
-                      <li key={idx}>{kp}</li>
+                      <li key={idx}>
+                        <span className="checklist-bullet">{idx + 1}</span>
+                        <span>{kp}</span>
+                      </li>
                     ))}
                   </ul>
                 </div>
               )}
 
+              {/* Definitions */}
               {summaryData.importantDefinitions?.length > 0 && (
-                <div className="summary-section-card">
-                  <div className="section-card-title">
-                    <BookOpen size={18} style={{ color: "var(--blue-accent)" }} />
-                    <h3>Important Definitions</h3>
+                <div className="summary-content-block">
+                  <div className="block-header">
+                    <BookOpen size={20} className="icon-blue" />
+                    <h3>Essential Definitions & Terminology</h3>
                   </div>
-                  <div className="definitions-grid">
+                  <div className="definitions-card-grid">
                     {summaryData.importantDefinitions.map((def, idx) => (
-                      <div key={idx} className="definition-item">
+                      <div key={idx} className="definition-card">
                         <strong>{def.term}</strong>
                         <p>{def.definition}</p>
                       </div>
@@ -412,41 +530,47 @@ ${summaryData.rawSummary}
                 </div>
               )}
 
+              {/* Essential Concepts */}
               {summaryData.importantConcepts?.length > 0 && (
-                <div className="summary-section-card">
-                  <div className="section-card-title">
-                    <Lightbulb size={18} style={{ color: "var(--purple-primary)" }} />
-                    <h3>Essential Concepts</h3>
+                <div className="summary-content-block">
+                  <div className="block-header">
+                    <Lightbulb size={20} className="icon-purple" />
+                    <h3>Key Concepts & Ideas</h3>
                   </div>
-                  <div className="concepts-list">
+                  <div className="concepts-pill-cloud">
                     {summaryData.importantConcepts.map((concept, idx) => (
-                      <div key={idx} className="concept-chip">
-                        <span>{concept}</span>
+                      <span key={idx} className="concept-cloud-pill">
+                        {concept}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Illustrative Examples */}
+              {summaryData.examples?.length > 0 && (
+                <div className="summary-content-block">
+                  <div className="block-header">
+                    <HelpCircle size={20} className="icon-peach" />
+                    <h3>Practical & Illustrative Examples</h3>
+                  </div>
+                  <div className="examples-cards-list">
+                    {summaryData.examples.map((ex, idx) => (
+                      <div key={idx} className="example-item-box">
+                        <span className="example-marker">Example {idx + 1}</span>
+                        <p>{ex}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {summaryData.examples?.length > 0 && (
-                <div className="summary-section-card">
-                  <div className="section-card-title">
-                    <HelpCircle size={18} style={{ color: "var(--peach-accent)" }} />
-                    <h3>Illustrative Examples</h3>
-                  </div>
-                  <ul className="examples-list">
-                    {summaryData.examples.map((ex, idx) => (
-                      <li key={idx}>{ex}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
+              {/* Conclusion */}
               {summaryData.conclusion && (
-                <div className="summary-section-card conclusion-card">
-                  <div className="section-card-title">
-                    <Sparkles size={18} style={{ color: "var(--purple-primary)" }} />
-                    <h3>Conclusion & Takeaways</h3>
+                <div className="summary-conclusion-card">
+                  <div className="block-header">
+                    <Sparkles size={20} className="icon-purple" />
+                    <h3>Conclusion & Synthesis</h3>
                   </div>
                   <p>{summaryData.conclusion}</p>
                 </div>
@@ -458,18 +582,20 @@ ${summaryData.rawSummary}
 
       {/* TAB 2: SIMPLE EXPLANATION */}
       {activeSubTab === "simplify" && (
-        <div className="studio-tab-content">
-          <div className="simplify-input-box">
-            <label htmlFor="custom-topic-input">
-              Focus on a specific topic or difficult paragraph (Optional):
-            </label>
-            <div className="simplify-input-row">
+        <div className="studio-tab-view">
+          <div className="simplify-prompt-bar">
+            <div className="simplify-bar-header">
+              <Lightbulb size={18} className="icon-purple" />
+              <span>Feynman Simplifier: Explain Complex Material in Plain, Conversational Language</span>
+            </div>
+            <div className="simplify-input-layout">
               <input
                 id="custom-topic-input"
                 type="text"
-                placeholder="e.g. Photosystem II, Calvin Cycle, or leave blank to simplify entire text"
+                placeholder="Optional: Enter a specific sub-topic or paragraph (leave blank to simplify entire text)"
                 value={customParagraph}
                 onChange={(e) => setCustomParagraph(e.target.value)}
+                className="simplify-text-input"
               />
               <button
                 type="button"
@@ -483,30 +609,57 @@ ${summaryData.rawSummary}
                   </>
                 ) : (
                   <>
-                    <Lightbulb size={16} /> Explain in Plain English
+                    <Lightbulb size={16} /> Explain in Simple Language
                   </>
                 )}
               </button>
             </div>
           </div>
 
-          {simplifiedData && (
-            <div className="simplified-results-container">
-              <div className="summary-section-card simplified-main-card">
-                <span className="summary-badge">Intuitive Explanation</span>
-                <p className="simplified-body">{simplifiedData.simplifiedText}</p>
+          {loadingSimplify && (
+            <div className="studio-card-loading">
+              <div className="btn-spinner large"></div>
+              <h4>Translating Jargon into Plain English...</h4>
+              <p>Applying the Feynman learning technique to formulate analogies and relatable examples.</p>
+            </div>
+          )}
+
+          {!loadingSimplify && !simplifiedData && (
+            <div className="studio-prompt-card">
+              <div className="prompt-card-icon-wrapper">
+                <Lightbulb size={36} />
+              </div>
+              <h3>Plain Language Learning</h3>
+              <p>Break down intimidating terminology and difficult theories into intuitive mental models.</p>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleGenerateSimplification}
+              >
+                <Sparkles size={16} /> Explain This Material Simply
+              </button>
+            </div>
+          )}
+
+          {!loadingSimplify && simplifiedData && (
+            <div className="simplify-results-stack">
+              {/* Intuitive Explanation Card */}
+              <div className="simplify-hero-card">
+                <span className="summary-kicker-badge">PLAIN ENGLISH EXPLANATION</span>
+                <p className="simplify-body-text">{simplifiedData.simplifiedText}</p>
               </div>
 
+              {/* Analogies */}
               {simplifiedData.analogies?.length > 0 && (
-                <div className="summary-section-card">
-                  <div className="section-card-title">
-                    <Sparkles size={18} style={{ color: "var(--peach-accent)" }} />
-                    <h3>Real-World Analogies</h3>
+                <div className="summary-content-block">
+                  <div className="block-header">
+                    <Sparkles size={20} className="icon-peach" />
+                    <h3>Relatable Real-World Analogies</h3>
                   </div>
-                  <div className="analogies-list">
+                  <div className="analogies-grid">
                     {simplifiedData.analogies.map((analogy, i) => (
-                      <div key={i} className="analogy-card">
-                        <span className="analogy-icon">💡</span>
+                      <div key={i} className="analogy-item-card">
+                        <span className="analogy-lightbulb">💡</span>
                         <p>{analogy}</p>
                       </div>
                     ))}
@@ -514,32 +667,37 @@ ${summaryData.rawSummary}
                 </div>
               )}
 
+              {/* Technical Glossary */}
               {simplifiedData.technicalGlossary?.length > 0 && (
-                <div className="summary-section-card">
-                  <div className="section-card-title">
-                    <BookOpen size={18} style={{ color: "var(--blue-accent)" }} />
-                    <h3>Technical Jargon Simplified</h3>
+                <div className="summary-content-block">
+                  <div className="block-header">
+                    <BookOpen size={20} className="icon-blue" />
+                    <h3>Technical Jargon Demystified</h3>
                   </div>
-                  <div className="glossary-grid">
+                  <div className="glossary-cards-grid">
                     {simplifiedData.technicalGlossary.map((item, i) => (
-                      <div key={i} className="glossary-card">
-                        <span className="glossary-term">{item.term}</span>
-                        <p className="glossary-expl">{item.simpleExplanation}</p>
+                      <div key={i} className="glossary-item-card">
+                        <strong className="glossary-term-badge">{item.term}</strong>
+                        <p className="glossary-expl-text">{item.simpleExplanation}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* Key Takeaways */}
               {simplifiedData.keyTakeaways?.length > 0 && (
-                <div className="summary-section-card">
-                  <div className="section-card-title">
-                    <CheckCircle2 size={18} style={{ color: "var(--mint-accent)" }} />
-                    <h3>Quick Takeaways</h3>
+                <div className="summary-content-block">
+                  <div className="block-header">
+                    <CheckCircle2 size={20} className="icon-mint" />
+                    <h3>Core Takeaways in 10 Seconds</h3>
                   </div>
-                  <ul className="key-points-list">
+                  <ul className="key-points-checklist">
                     {simplifiedData.keyTakeaways.map((t, i) => (
-                      <li key={i}>{t}</li>
+                      <li key={i}>
+                        <span className="checklist-bullet">✓</span>
+                        <span>{t}</span>
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -551,73 +709,88 @@ ${summaryData.rawSummary}
 
       {/* TAB 3: MIND MAP */}
       {activeSubTab === "mindmap" && (
-        <div className="studio-tab-content">
-          {!visualData?.mindMapData && (
-            <div className="studio-prompt-box">
-              <GitFork size={40} style={{ color: "var(--purple-primary)" }} />
+        <div className="studio-tab-view">
+          {loadingVisual && (
+            <div className="studio-card-loading">
+              <div className="btn-spinner large"></div>
+              <h4>Building Concept Mind Map...</h4>
+              <p>Analyzing semantic relationships, parent topics, and subtopics.</p>
+            </div>
+          )}
+
+          {!loadingVisual && !visualData?.mindMapData && (
+            <div className="studio-prompt-card">
+              <div className="prompt-card-icon-wrapper">
+                <GitFork size={36} />
+              </div>
               <h3>Visual Concept Mind Map</h3>
-              <p>Generate a structured node-and-branch relationship hierarchy for this document.</p>
+              <p>Generate an interactive conceptual hierarchy branching out from the core theme.</p>
               <button
                 type="button"
                 className="btn-primary"
                 onClick={handleGenerateVisualLearning}
-                disabled={loadingVisual}
               >
-                {loadingVisual ? "Generating..." : "Generate Mind Map"}
+                <Sparkles size={16} /> Generate Mind Map
               </button>
             </div>
           )}
 
-          {visualData?.mindMapData && (
-            <div className="mindmap-container">
-              <div className="mindmap-header">
-                <h3>{visualData.mindMapData.topic}</h3>
-                <span className="mindmap-count">
-                  {visualData.mindMapData.nodes?.length || 0} Concept Nodes
-                </span>
+          {!loadingVisual && visualData?.mindMapData && (
+            <div className="mindmap-visual-board">
+              <div className="board-top-controls">
+                <div>
+                  <h3 className="board-title">{visualData.mindMapData.topic}</h3>
+                  <span className="board-subtitle">Interactive conceptual relationship branches</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-toolbar-action"
+                  onClick={handleGenerateVisualLearning}
+                  disabled={loadingVisual}
+                >
+                  <RotateCw size={14} /> Regenerate Mind Map
+                </button>
               </div>
 
-              <div className="mindmap-interactive-view">
-                {/* Center Root Node */}
-                <div className="mindmap-root-node">
-                  <span className="node-type-label">Core Subject</span>
-                  <h4>{visualData.mindMapData.topic}</h4>
-                </div>
+              {/* Center Core Node */}
+              <div className="mindmap-core-anchor">
+                <span className="core-node-label">CENTRAL THEME</span>
+                <h2 className="core-node-title">{visualData.mindMapData.topic}</h2>
+              </div>
 
-                {/* Branches & Subtopics */}
-                <div className="mindmap-branches-grid">
-                  {(visualData.mindMapData.nodes || [])
-                    .filter((n) => n.type === "branch" || n.parentId === "root")
-                    .map((branch) => {
-                      const children = (visualData.mindMapData.nodes || []).filter(
-                        (child) => child.parentId === branch.id
-                      );
-                      return (
-                        <div key={branch.id} className="mindmap-branch-card">
-                          <div className="branch-header">
-                            <span className="branch-dot"></span>
-                            <h4>{branch.label}</h4>
-                          </div>
-                          {branch.description && (
-                            <p className="branch-desc">{branch.description}</p>
-                          )}
-                          {children.length > 0 && (
-                            <div className="subtopics-list">
-                              {children.map((sub) => (
-                                <div key={sub.id} className="subtopic-item">
-                                  <ChevronRight size={13} style={{ color: "var(--purple-primary)" }} />
-                                  <div>
-                                    <strong>{sub.label}</strong>
-                                    {sub.description && <span> — {sub.description}</span>}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+              {/* Connecting Lines & Branches Grid */}
+              <div className="mindmap-branches-board">
+                {(visualData.mindMapData.nodes || [])
+                  .filter((n) => n.type === "branch" || n.parentId === "root")
+                  .map((branch, bIdx) => {
+                    const children = (visualData.mindMapData.nodes || []).filter(
+                      (child) => child.parentId === branch.id
+                    );
+                    return (
+                      <div key={branch.id || bIdx} className="mindmap-branch-node">
+                        <div className="branch-header-row">
+                          <span className="branch-index-pill">{bIdx + 1}</span>
+                          <h4>{branch.label}</h4>
                         </div>
-                      );
-                    })}
-                </div>
+                        {branch.description && (
+                          <p className="branch-summary-p">{branch.description}</p>
+                        )}
+                        {children.length > 0 && (
+                          <div className="branch-subnodes-list">
+                            {children.map((sub, sIdx) => (
+                              <div key={sub.id || sIdx} className="subnode-card">
+                                <ChevronRight size={14} className="subnode-arrow" />
+                                <div className="subnode-text">
+                                  <strong>{sub.label}</strong>
+                                  {sub.description && <span> — {sub.description}</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}
@@ -626,82 +799,167 @@ ${summaryData.rawSummary}
 
       {/* TAB 4: FLOWCHART */}
       {activeSubTab === "flowchart" && (
-        <div className="studio-tab-content">
-          {!visualData?.flowchartData && (
-            <div className="studio-prompt-box">
-              <ArrowRight size={40} style={{ color: "var(--purple-primary)" }} />
-              <h3>Process & Workflow Flowchart</h3>
-              <p>Transform chronological or procedural concepts into a step-by-step flowchart.</p>
+        <div className="studio-tab-view">
+          {loadingVisual && (
+            <div className="studio-card-loading">
+              <div className="btn-spinner large"></div>
+              <h4>Constructing Process Flowchart...</h4>
+              <p>Tracing sequential algorithms, lifecycles, and chronological steps.</p>
+            </div>
+          )}
+
+          {!loadingVisual && !visualData?.flowchartData && (
+            <div className="studio-prompt-card">
+              <div className="prompt-card-icon-wrapper">
+                <ArrowRight size={36} />
+              </div>
+              <h3>Sequential Process Flowchart</h3>
+              <p>Convert procedural or chronological ideas into a step-by-step visual pipeline.</p>
               <button
                 type="button"
                 className="btn-primary"
                 onClick={handleGenerateVisualLearning}
-                disabled={loadingVisual}
               >
-                {loadingVisual ? "Generating..." : "Generate Flowchart"}
+                <Sparkles size={16} /> Generate Flowchart
               </button>
             </div>
           )}
 
-          {visualData?.flowchartData && (
-            <div className="flowchart-container">
-              <div className="flowchart-header">
-                <h3>{visualData.flowchartData.title || "Step-by-Step Flowchart"}</h3>
-                <span className="flowchart-badge">Sequential Process</span>
+          {!loadingVisual && visualData?.flowchartData && (
+            <div className="flowchart-board-container">
+              <div className="board-top-controls">
+                <div>
+                  <h3 className="board-title">{visualData.flowchartData.title || "Step-by-Step Flowchart"}</h3>
+                  <span className="board-subtitle">Sequential execution and decision flow</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-toolbar-action"
+                  onClick={handleGenerateVisualLearning}
+                  disabled={loadingVisual}
+                >
+                  <RotateCw size={14} /> Regenerate Flowchart
+                </button>
               </div>
 
-              <div className="flowchart-steps-pipeline">
-                {(visualData.flowchartData.steps || []).map((step, idx) => (
-                  <div key={step.id || idx} className="flowchart-step-wrapper">
-                    <div className={`flowchart-node node-${step.type || "process"}`}>
-                      <div className="node-step-badge">
-                        {step.type === "start" ? "START" : step.type === "end" ? "END" : `STEP ${step.stepNumber || idx + 1}`}
+              {/* Timeline Flow Steps */}
+              <div className="flowchart-vertical-pipeline">
+                {(visualData.flowchartData.steps || []).map((step, idx, arr) => {
+                  const isFirst = idx === 0;
+                  const isLast = idx === arr.length - 1;
+                  const isDecision = step.type === "decision";
+
+                  let badgeColor = "var(--purple-primary)";
+                  let badgeBg = "var(--lavender)";
+                  if (isFirst) {
+                    badgeColor = "var(--mint-accent)";
+                    badgeBg = "var(--mint-soft)";
+                  } else if (isLast) {
+                    badgeColor = "var(--blue-accent)";
+                    badgeBg = "var(--blue-soft)";
+                  } else if (isDecision) {
+                    badgeColor = "var(--peach-accent)";
+                    badgeBg = "var(--peach-soft)";
+                  }
+
+                  return (
+                    <div key={step.id || idx} className="flowchart-node-wrapper">
+                      <div className="flowchart-step-card">
+                        <div
+                          className="step-badge-circle"
+                          style={{ backgroundColor: badgeBg, color: badgeColor }}
+                        >
+                          {step.stepNumber || idx + 1}
+                        </div>
+
+                        <div className="step-content-area">
+                          <div className="step-type-header">
+                            <span
+                              className="step-type-pill"
+                              style={{ backgroundColor: badgeBg, color: badgeColor }}
+                            >
+                              {step.type?.toUpperCase() || (isFirst ? "START" : isLast ? "END" : "PROCESS")}
+                            </span>
+                            <h4>{step.label}</h4>
+                          </div>
+                          <p>{step.description}</p>
+                          {step.condition && (
+                            <div className="step-condition-note">
+                              <span>Condition: </span> {step.condition}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <h4>{step.label}</h4>
-                      {step.description && <p>{step.description}</p>}
-                      {step.condition && (
-                        <div className="node-condition">Condition: {step.condition}</div>
+
+                      {!isLast && (
+                        <div className="flowchart-arrow-connector">
+                          <div className="connector-line"></div>
+                          <div className="connector-arrowhead">↓</div>
+                        </div>
                       )}
                     </div>
-                    {idx < visualData.flowchartData.steps.length - 1 && (
-                      <div className="flowchart-arrow">
-                        <ArrowRight size={24} />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* TAB 5: COMPARISON TABLES */}
+      {/* TAB 5: COMPARISON TABLES (FIXED & BEAUTIFULLY STYLED) */}
       {activeSubTab === "comparison" && (
-        <div className="studio-tab-content">
-          {!visualData?.comparisonTables && (
-            <div className="studio-prompt-box">
-              <Table size={40} style={{ color: "var(--purple-primary)" }} />
+        <div className="studio-tab-view">
+          {loadingVisual && (
+            <div className="studio-card-loading">
+              <div className="btn-spinner large"></div>
+              <h4>Synthesizing Concept Comparison Matrices...</h4>
+              <p>Analyzing contrasting frameworks, trade-offs, and feature differentials.</p>
+            </div>
+          )}
+
+          {!loadingVisual && !visualData?.comparisonTables && (
+            <div className="studio-prompt-card">
+              <div className="prompt-card-icon-wrapper">
+                <Table size={36} />
+              </div>
               <h3>Concept Comparison Tables</h3>
-              <p>Compare and contrast related ideas, trade-offs, advantages, and alternative methods.</p>
+              <p>Compare and contrast related ideas, approaches, trade-offs, and alternative methods.</p>
               <button
                 type="button"
                 className="btn-primary"
                 onClick={handleGenerateVisualLearning}
-                disabled={loadingVisual}
               >
-                {loadingVisual ? "Generating..." : "Generate Comparison Tables"}
+                <Sparkles size={16} /> Generate Comparison Tables
               </button>
             </div>
           )}
 
-          {visualData?.comparisonTables && (
-            <div className="comparison-tables-container">
+          {!loadingVisual && visualData?.comparisonTables && (
+            <div className="comparison-matrices-deck">
+              <div className="board-top-controls">
+                <div>
+                  <h3 className="board-title">Concept & Framework Comparison Matrices</h3>
+                  <span className="board-subtitle">Side-by-side dimension analysis and trade-offs</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-toolbar-action"
+                  onClick={handleGenerateVisualLearning}
+                  disabled={loadingVisual}
+                >
+                  <RotateCw size={14} /> Regenerate Tables
+                </button>
+              </div>
+
               {(visualData.comparisonTables || []).map((tbl, idx) => (
-                <div key={idx} className="comparison-table-card">
-                  <h3>{tbl.title || `Concept Matrix ${idx + 1}`}</h3>
-                  <div className="table-responsive">
-                    <table className="comparison-table">
+                <div key={idx} className="comparison-table-surface">
+                  <div className="table-surface-header">
+                    <span className="matrix-number-tag">Matrix {idx + 1}</span>
+                    <h3 className="table-surface-title">{tbl.title || `Concept Matrix ${idx + 1}`}</h3>
+                  </div>
+
+                  <div className="table-responsive-viewport">
+                    <table className="modern-comparison-table">
                       <thead>
                         <tr>
                           {(tbl.headers || []).map((h, i) => (
@@ -713,7 +971,9 @@ ${summaryData.rawSummary}
                         {(tbl.rows || []).map((row, rIdx) => (
                           <tr key={rIdx}>
                             {row.map((cell, cIdx) => (
-                              <td key={cIdx}>{cell}</td>
+                              <td key={cIdx} className={cIdx === 0 ? "feature-header-cell" : ""}>
+                                {cell}
+                              </td>
                             ))}
                           </tr>
                         ))}
@@ -729,63 +989,93 @@ ${summaryData.rawSummary}
 
       {/* TAB 6: CHARTS & GRAPHS */}
       {activeSubTab === "charts" && (
-        <div className="studio-tab-content">
-          {!visualData?.chartsData && (
-            <div className="studio-prompt-box">
-              <BarChart2 size={40} style={{ color: "var(--purple-primary)" }} />
+        <div className="studio-tab-view">
+          {loadingVisual && (
+            <div className="studio-card-loading">
+              <div className="btn-spinner large"></div>
+              <h4>Scanning Document for Numerical Metrics...</h4>
+              <p>Validating factual numbers, percentages, and statistical distributions.</p>
+            </div>
+          )}
+
+          {!loadingVisual && !visualData?.chartsData && (
+            <div className="studio-prompt-card">
+              <div className="prompt-card-icon-wrapper">
+                <BarChart2 size={36} />
+              </div>
               <h3>Data Grounded Visualizations</h3>
-              <p>Extract numerical statistics and figures into charts with zero hallucinated data.</p>
+              <p>Extract verified numerical statistics and figures into charts with zero hallucinated data.</p>
               <button
                 type="button"
                 className="btn-primary"
                 onClick={handleGenerateVisualLearning}
-                disabled={loadingVisual}
               >
-                {loadingVisual ? "Generating..." : "Scan & Generate Charts"}
+                <Sparkles size={16} /> Scan & Generate Charts
               </button>
             </div>
           )}
 
-          {visualData?.chartsData && (
-            <div className="charts-view-container">
+          {!loadingVisual && visualData?.chartsData && (
+            <div className="charts-board-deck">
+              <div className="board-top-controls">
+                <div>
+                  <h3 className="board-title">Quantitative Metrics & Visualizations</h3>
+                  <span className="board-subtitle">Strictly grounded on actual statistics from your material</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-toolbar-action"
+                  onClick={handleGenerateVisualLearning}
+                  disabled={loadingVisual}
+                >
+                  <RotateCw size={14} /> Rescan Metrics
+                </button>
+              </div>
+
               {!visualData.chartsData.hasNumericalData ? (
-                <div className="no-data-notice-box">
-                  <Info size={28} style={{ color: "var(--blue-accent)" }} />
-                  <h4>No Numerical Data in Material</h4>
-                  <p>
-                    {visualData.chartsData.message ||
-                      "This study material is conceptual and does not contain quantitative measurements or percentages. In accordance with academic accuracy rules, no fabricated charts were created."}
-                  </p>
+                <div className="no-data-honest-card">
+                  <div className="honest-card-icon">
+                    <Info size={28} />
+                  </div>
+                  <div>
+                    <h4>Conceptual Study Material — No Numerical Data</h4>
+                    <p>
+                      {visualData.chartsData.message ||
+                        "This document covers qualitative and conceptual principles without quantitative statistics, percentages, or measurements. Under our academic integrity rules, no artificial or fake numbers were fabricated."}
+                    </p>
+                  </div>
                 </div>
               ) : (
-                <div className="charts-grid">
+                <div className="charts-grid-layout">
                   {(visualData.chartsData.charts || []).map((chart, idx) => {
                     const maxValue = Math.max(
                       ...chart.dataPoints.map((d) => d.value),
                       1
                     );
                     return (
-                      <div key={idx} className="chart-card">
-                        <div className="chart-header">
-                          <h4>{chart.title}</h4>
-                          <span className="chart-type-pill">{chart.type?.toUpperCase()} CHART</span>
+                      <div key={idx} className="metric-chart-card">
+                        <div className="metric-chart-header">
+                          <div>
+                            <h4>{chart.title}</h4>
+                            <p>{chart.description}</p>
+                          </div>
+                          <span className="chart-type-tag">{chart.type?.toUpperCase()} CHART</span>
                         </div>
-                        <p className="chart-desc">{chart.description}</p>
 
-                        <div className="css-bar-chart">
+                        <div className="horizontal-bars-canvas">
                           {chart.dataPoints.map((dp, dIdx) => {
                             const pct = Math.round((dp.value / maxValue) * 100);
                             return (
-                              <div key={dIdx} className="bar-row">
-                                <span className="bar-label">{dp.label}</span>
-                                <div className="bar-track">
+                              <div key={dIdx} className="bar-data-row">
+                                <span className="bar-category-name">{dp.label}</span>
+                                <div className="bar-track-shell">
                                   <div
-                                    className="bar-fill"
-                                    style={{ width: `${pct}%` }}
+                                    className="bar-fill-fluid"
+                                    style={{ width: `${Math.max(5, pct)}%` }}
                                     title={`${dp.value} ${chart.unit || ""}`}
                                   ></div>
                                 </div>
-                                <span className="bar-value">
+                                <span className="bar-metric-value">
                                   {dp.value} {chart.unit || ""}
                                 </span>
                               </div>
@@ -804,74 +1094,115 @@ ${summaryData.rawSummary}
 
       {/* TAB 7: FLASHCARDS */}
       {activeSubTab === "flashcards" && (
-        <div className="studio-tab-content">
-          {!visualData?.flashcards || visualData.flashcards.length === 0 ? (
-            <div className="studio-prompt-box">
-              <Layers size={40} style={{ color: "var(--purple-primary)" }} />
+        <div className="studio-tab-view">
+          {loadingVisual && (
+            <div className="studio-card-loading">
+              <div className="btn-spinner large"></div>
+              <h4>Crafting Active Recall Flashcards...</h4>
+              <p>Formulating high-yield question prompts and answer explanations.</p>
+            </div>
+          )}
+
+          {!loadingVisual && (!visualData?.flashcards || visualData.flashcards.length === 0) && (
+            <div className="studio-prompt-card">
+              <div className="prompt-card-icon-wrapper">
+                <Layers size={36} />
+              </div>
               <h3>Interactive Study Flashcards</h3>
-              <p>Generate high-yield question & answer flashcards to test active recall.</p>
+              <p>Generate high-yield question & answer study cards to test active recall.</p>
               <button
                 type="button"
                 className="btn-primary"
                 onClick={handleGenerateVisualLearning}
-                disabled={loadingVisual}
               >
-                {loadingVisual ? "Generating..." : "Generate Flashcards"}
+                <Sparkles size={16} /> Generate Flashcards
               </button>
             </div>
-          ) : (
-            <div className="flashcards-deck-view">
-              <div className="deck-progress-bar">
-                <span>
-                  Card {activeFlashcardIndex + 1} of {visualData.flashcards.length}
-                </span>
-                <span className="deck-category">
-                  {visualData.flashcards[activeFlashcardIndex]?.category?.toUpperCase()}
-                </span>
+          )}
+
+          {!loadingVisual && visualData?.flashcards && visualData.flashcards.length > 0 && (
+            <div className="flashcards-deck-arena">
+              <div className="deck-status-bar">
+                <div className="deck-status-left">
+                  <span className="deck-card-counter">
+                    Card {activeFlashcardIndex + 1} of {visualData.flashcards.length}
+                  </span>
+                  <span className="deck-topic-category">
+                    {visualData.flashcards[activeFlashcardIndex]?.category?.toUpperCase() || "CONCEPT"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-toolbar-action"
+                  onClick={handleGenerateVisualLearning}
+                  disabled={loadingVisual}
+                >
+                  <RotateCw size={14} /> Regenerate Deck
+                </button>
               </div>
 
-              {/* Flippable Card */}
+              {/* 3D Flippable Card Arena */}
               <div
-                className={`flashcard-card ${isFlipped ? "flipped" : ""}`}
+                className={`flashcard-3d-scene ${isFlipped ? "is-flipped" : ""}`}
                 onClick={() => setIsFlipped(!isFlipped)}
+                role="button"
+                tabIndex={0}
+                aria-label="Click to flip flashcard"
               >
-                <div className="flashcard-inner">
-                  <div className="flashcard-front">
-                    <span className="card-face-indicator">QUESTION / PROMPT</span>
-                    <h3>{visualData.flashcards[activeFlashcardIndex]?.front}</h3>
-                    <p className="click-to-flip-text">Click anywhere to reveal answer ↻</p>
+                <div className="flashcard-3d-object">
+                  {/* Front: Question */}
+                  <div className="flashcard-face flashcard-front-face">
+                    <div className="face-header">
+                      <span className="face-type-badge question-badge">QUESTION / PROMPT</span>
+                      <span className="face-flip-hint">Click card to reveal answer ↻</span>
+                    </div>
+                    <div className="face-body">
+                      <h3>{visualData.flashcards[activeFlashcardIndex]?.front}</h3>
+                    </div>
+                    <div className="face-footer">
+                      <span>QuizCraft AI Active Recall</span>
+                    </div>
                   </div>
-                  <div className="flashcard-back">
-                    <span className="card-face-indicator">ANSWER / EXPLANATION</span>
-                    <p>{visualData.flashcards[activeFlashcardIndex]?.back}</p>
-                    <p className="click-to-flip-text">Click to flip back ↻</p>
+
+                  {/* Back: Answer */}
+                  <div className="flashcard-face flashcard-back-face">
+                    <div className="face-header">
+                      <span className="face-type-badge answer-badge">ANSWER / EXPLANATION</span>
+                      <span className="face-flip-hint">Click card to flip back ↻</span>
+                    </div>
+                    <div className="face-body">
+                      <p>{visualData.flashcards[activeFlashcardIndex]?.back}</p>
+                    </div>
+                    <div className="face-footer">
+                      <span>Verified against uploaded notes</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Navigation controls */}
-              <div className="flashcard-controls">
+              {/* Deck Navigation Controls */}
+              <div className="deck-nav-controls">
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="btn-deck-nav"
                   disabled={activeFlashcardIndex === 0}
                   onClick={() => {
                     setIsFlipped(false);
                     setActiveFlashcardIndex((prev) => Math.max(0, prev - 1));
                   }}
                 >
-                  Previous
+                  ← Previous Card
                 </button>
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="btn-deck-flip"
                   onClick={() => setIsFlipped(!isFlipped)}
                 >
-                  Flip Card
+                  Flip Card ↻
                 </button>
                 <button
                   type="button"
-                  className="btn-primary"
+                  className="btn-deck-nav primary-nav"
                   disabled={activeFlashcardIndex === visualData.flashcards.length - 1}
                   onClick={() => {
                     setIsFlipped(false);
@@ -880,7 +1211,7 @@ ${summaryData.rawSummary}
                     );
                   }}
                 >
-                  Next Card
+                  Next Card →
                 </button>
               </div>
             </div>
