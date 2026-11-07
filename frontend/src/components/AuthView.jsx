@@ -10,12 +10,14 @@ import {
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
-  BookOpen,
+  KeyRound,
+  RotateCcw,
 } from "lucide-react";
-import { loginUser, registerUser } from "../services/api";
+import { loginUser, registerUser, resetPassword } from "../services/api";
 
 export default function AuthView({ onAuthSuccess, onShowToast }) {
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  // 'login' | 'register' | 'forgot'
+  const [authMode, setAuthMode] = useState("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,17 +25,66 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
+    setSuccessMessage("");
 
-    if (!email.trim() || !password) {
-      setErrorMessage("Please enter both email and password.");
+    if (!email.trim()) {
+      setErrorMessage("Please enter your registered email address.");
       return;
     }
 
-    if (!isLoginMode) {
+    // Forgot Password Flow
+    if (authMode === "forgot") {
+      if (!password) {
+        setErrorMessage("Please enter a new password.");
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMessage("New password must be at least 6 characters long.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMessage("New passwords do not match.");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await resetPassword({
+          email: email.trim(),
+          newPassword: password,
+        });
+        setSuccessMessage(res.message || "Password reset successfully! Please sign in.");
+        if (onShowToast) {
+          onShowToast("Password reset! You can now sign in.", "success");
+        }
+        setPassword("");
+        setConfirmPassword("");
+        setAuthMode("login");
+      } catch (err) {
+        const msg =
+          err.response?.data?.message ||
+          err.message ||
+          "Could not reset password. Please check your email.";
+        setErrorMessage(msg);
+        if (onShowToast) onShowToast(msg, "error");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Login or Register Flow
+    if (!password) {
+      setErrorMessage("Please enter your password.");
+      return;
+    }
+
+    if (authMode === "register") {
       if (!name.trim()) {
         setErrorMessage("Please enter your full name.");
         return;
@@ -52,7 +103,7 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
 
     try {
       let res;
-      if (isLoginMode) {
+      if (authMode === "login") {
         res = await loginUser({ email: email.trim(), password });
       } else {
         res = await registerUser({
@@ -92,9 +143,9 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
 
     setLoading(true);
     setErrorMessage("");
+    setSuccessMessage("");
 
     try {
-      // Attempt login first
       let res;
       try {
         res = await loginUser({
@@ -102,7 +153,6 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
           password: "password123",
         });
       } catch (loginErr) {
-        // If demo user does not exist yet, register it automatically!
         res = await registerUser({
           name: "Demo Student",
           email: "student@quizcraft.ai",
@@ -174,20 +224,22 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
           <div className="auth-mode-toggle">
             <button
               type="button"
-              className={`mode-toggle-btn ${isLoginMode ? "mode-active" : ""}`}
+              className={`mode-toggle-btn ${authMode === "login" ? "mode-active" : ""}`}
               onClick={() => {
-                setIsLoginMode(true);
+                setAuthMode("login");
                 setErrorMessage("");
+                setSuccessMessage("");
               }}
             >
               Sign In
             </button>
             <button
               type="button"
-              className={`mode-toggle-btn ${!isLoginMode ? "mode-active" : ""}`}
+              className={`mode-toggle-btn ${authMode === "register" ? "mode-active" : ""}`}
               onClick={() => {
-                setIsLoginMode(false);
+                setAuthMode("register");
                 setErrorMessage("");
+                setSuccessMessage("");
               }}
             >
               Create Account
@@ -195,9 +247,17 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
           </div>
 
           <div className="auth-form-header">
-            <h3>{isLoginMode ? "Welcome Back!" : "Join QuizCraft AI"}</h3>
+            <h3>
+              {authMode === "forgot"
+                ? "Reset Account Password"
+                : authMode === "login"
+                ? "Welcome Back!"
+                : "Join QuizCraft AI"}
+            </h3>
             <p>
-              {isLoginMode
+              {authMode === "forgot"
+                ? "Enter your registered email address and choose a new password."
+                : authMode === "login"
                 ? "Sign in to access your study library and quiz history"
                 : "Create your free student account to start learning"}
             </p>
@@ -209,8 +269,25 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
             </div>
           )}
 
+          {successMessage && (
+            <div className="auth-success-box" style={{
+              backgroundColor: "var(--mint-soft)",
+              color: "var(--mint-accent)",
+              padding: "10px 14px",
+              borderRadius: "8px",
+              fontSize: "0.85rem",
+              marginBottom: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}>
+              <CheckCircle2 size={16} />
+              <span>{successMessage}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="auth-actual-form">
-            {!isLoginMode && (
+            {authMode === "register" && (
               <div className="auth-input-group">
                 <label htmlFor="reg-name">Full Name</label>
                 <div className="input-with-icon">
@@ -221,7 +298,7 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
                     placeholder="e.g. Alex Johnson"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    required={!isLoginMode}
+                    required
                     autoComplete="name"
                   />
                 </div>
@@ -245,17 +322,47 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
             </div>
 
             <div className="auth-input-group">
-              <label htmlFor="auth-password">Password</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <label htmlFor="auth-password">
+                  {authMode === "forgot" ? "New Password" : "Password"}
+                </label>
+                {authMode === "login" && (
+                  <button
+                    type="button"
+                    className="btn-forgot-password-link"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--purple-primary)",
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                      padding: 0
+                    }}
+                    onClick={() => {
+                      setAuthMode("forgot");
+                      setErrorMessage("");
+                      setSuccessMessage("");
+                    }}
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
               <div className="input-with-icon">
                 <Lock size={18} className="field-icon" />
                 <input
                   id="auth-password"
                   type={showPassword ? "text" : "password"}
-                  placeholder={isLoginMode ? "••••••••" : "At least 6 characters"}
+                  placeholder={
+                    authMode === "login"
+                      ? "••••••••"
+                      : "At least 6 characters"
+                  }
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  autoComplete={isLoginMode ? "current-password" : "new-password"}
+                  autoComplete={authMode === "login" ? "current-password" : "new-password"}
                 />
                 <button
                   type="button"
@@ -268,9 +375,11 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
               </div>
             </div>
 
-            {!isLoginMode && (
+            {(authMode === "register" || authMode === "forgot") && (
               <div className="auth-input-group">
-                <label htmlFor="auth-confirm-password">Confirm Password</label>
+                <label htmlFor="auth-confirm-password">
+                  {authMode === "forgot" ? "Confirm New Password" : "Confirm Password"}
+                </label>
                 <div className="input-with-icon">
                   <Lock size={18} className="field-icon" />
                   <input
@@ -279,7 +388,7 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
                     placeholder="Repeat your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    required={!isLoginMode}
+                    required
                     autoComplete="new-password"
                   />
                 </div>
@@ -294,15 +403,53 @@ export default function AuthView({ onAuthSuccess, onShowToast }) {
               {loading ? (
                 <>
                   <div className="btn-spinner"></div>
-                  <span>{isLoginMode ? "Signing In..." : "Creating Account..."}</span>
+                  <span>
+                    {authMode === "forgot"
+                      ? "Resetting Password..."
+                      : authMode === "login"
+                      ? "Signing In..."
+                      : "Creating Account..."}
+                  </span>
                 </>
               ) : (
                 <>
-                  <span>{isLoginMode ? "Sign In to Workspace" : "Register Account"}</span>
+                  <span>
+                    {authMode === "forgot"
+                      ? "Reset Password & Continue"
+                      : authMode === "login"
+                      ? "Sign In to Workspace"
+                      : "Register Account"}
+                  </span>
                   <ArrowRight size={18} />
                 </>
               )}
             </button>
+
+            {authMode === "forgot" && (
+              <button
+                type="button"
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-secondary)",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  textAlign: "center",
+                  marginTop: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+                onClick={() => {
+                  setAuthMode("login");
+                  setErrorMessage("");
+                  setSuccessMessage("");
+                }}
+              >
+                <RotateCcw size={14} /> Back to Sign In
+              </button>
+            )}
           </form>
 
           {/* Quick Demo Access Bar */}

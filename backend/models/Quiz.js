@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+﻿const mongoose = require("mongoose");
 
 const quizQuestionSchema = new mongoose.Schema(
   {
@@ -30,6 +30,14 @@ const quizQuestionSchema = new mongoose.Schema(
       enum: ["multiple_choice", "true_false", "fill_in_the_blank"],
       default: "multiple_choice",
     },
+    topicId: {
+      type: String,
+      default: "general",
+    },
+    topicName: {
+      type: String,
+      default: "General Concept",
+    },
   },
   { _id: true }
 );
@@ -55,6 +63,10 @@ const quizSchema = new mongoose.Schema(
       type: String,
       enum: ["easy", "medium", "hard"],
       required: true,
+    },
+    selectedTopics: {
+      type: [String],
+      default: ["all"],
     },
     questions: {
       type: [quizQuestionSchema],

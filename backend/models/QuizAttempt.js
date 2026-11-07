@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+﻿const mongoose = require("mongoose");
 
 const quizAttemptResultSchema = new mongoose.Schema(
   {
@@ -10,6 +10,19 @@ const quizAttemptResultSchema = new mongoose.Schema(
     isCorrect: { type: Boolean, required: true },
     explanation: { type: String, default: "" },
     questionType: { type: String, default: "multiple_choice" },
+    topicId: { type: String, default: "general" },
+    topicName: { type: String, default: "General Concept" },
+  },
+  { _id: false }
+);
+
+const topicPerformanceSchema = new mongoose.Schema(
+  {
+    topicId: { type: String, required: true },
+    topicName: { type: String, required: true },
+    totalQuestions: { type: Number, default: 0 },
+    correctCount: { type: Number, default: 0 },
+    accuracy: { type: Number, default: 0 },
   },
   { _id: false }
 );
@@ -82,6 +95,10 @@ const quizAttemptSchema = new mongoose.Schema(
     },
     results: {
       type: [quizAttemptResultSchema],
+      default: [],
+    },
+    topicPerformance: {
+      type: [topicPerformanceSchema],
       default: [],
     },
   },

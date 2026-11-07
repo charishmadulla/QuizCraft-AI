@@ -11,6 +11,9 @@ import MyQuizzesView from "./components/MyQuizzesView";
 import BookmarkedQuestionsView from "./components/BookmarkedQuestionsView";
 import AnalyticsView from "./components/AnalyticsView";
 import SettingsView from "./components/SettingsView";
+import SmartLearningStudioView from "./components/SmartLearningStudioView";
+import PerformanceIntelligenceView from "./components/PerformanceIntelligenceView";
+import PersonalizedRecommendationsView from "./components/PersonalizedRecommendationsView";
 import Toast from "./components/Toast";
 import ConfirmationModal from "./components/ConfirmationModal";
 import MaterialPreviewModal from "./components/MaterialPreviewModal";
@@ -100,6 +103,8 @@ export default function App() {
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
   const [quizResults, setQuizResults] = useState(null);
+  const [preSelectedTopicForQuiz, setPreSelectedTopicForQuiz] = useState("");
+  const [preSelectedStudioTopic, setPreSelectedStudioTopic] = useState("");
 
   // Listen for session expiration
   useEffect(() => {
@@ -272,6 +277,19 @@ export default function App() {
   // Quiz Generation & Taking Actions
   const handleStartGenerateQuizForMaterial = (materialId) => {
     setPreSelectedMaterialId(materialId);
+    setPreSelectedTopicForQuiz("");
+    setActiveTab("generate");
+  };
+
+  const handleSelectTopicForRevision = (materialId, topicName) => {
+    if (materialId) setPreSelectedMaterialId(materialId);
+    setPreSelectedStudioTopic(topicName || "");
+    setActiveTab("learning-studio");
+  };
+
+  const handleStartTargetedQuiz = (materialId, topicName) => {
+    if (materialId) setPreSelectedMaterialId(materialId);
+    setPreSelectedTopicForQuiz(topicName || "");
     setActiveTab("generate");
   };
 
@@ -483,11 +501,23 @@ export default function App() {
             />
           )}
 
+          {/* SMART LEARNING STUDIO TAB */}
+          {activeTab === "learning-studio" && (
+            <SmartLearningStudioView
+              materials={materials}
+              selectedMaterialId={preSelectedMaterialId}
+              onNavigateToUpload={() => setActiveTab("materials")}
+              onGenerateQuizForMaterial={handleStartTargetedQuiz}
+              onShowToast={showToast}
+            />
+          )}
+
           {/* GENERATE QUIZ TAB */}
           {activeTab === "generate" && (
             <GenerateQuizView
               materials={materials}
               selectedMaterialId={preSelectedMaterialId}
+              preSelectedTopic={preSelectedTopicForQuiz}
               onGenerateQuiz={handleGenerateQuiz}
               generating={generatingQuiz}
               error={generationError}
@@ -513,7 +543,28 @@ export default function App() {
               onGenerateAnother={() => setActiveTab("generate")}
               onBackToDashboard={() => setActiveTab("dashboard")}
               onBookmarkQuestion={handleBookmarkToggle}
+              onReviseTopic={handleSelectTopicForRevision}
+              onTargetTopicQuiz={handleStartTargetedQuiz}
               bookmarkedMap={bookmarkedMap}
+            />
+          )}
+
+          {/* PERFORMANCE INTELLIGENCE TAB */}
+          {activeTab === "performance-intelligence" && (
+            <PerformanceIntelligenceView
+              onNavigateToQuiz={handleStartTargetedQuiz}
+              onNavigateToRecommendations={() => setActiveTab("recommendations")}
+              onShowToast={showToast}
+            />
+          )}
+
+          {/* REVISION PLANS TAB */}
+          {activeTab === "recommendations" && (
+            <PersonalizedRecommendationsView
+              onSelectTopicForRevision={handleSelectTopicForRevision}
+              onStartTargetedQuiz={handleStartTargetedQuiz}
+              onNavigateToMaterials={() => setActiveTab("materials")}
+              onShowToast={showToast}
             />
           )}
 

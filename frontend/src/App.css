@@ -3786,3 +3786,703 @@
   margin: 0;
   line-height: 1.35;
 }
+
+
+/* ==========================================================================
+   MODULE ONE — SMART LEARNING STUDIO STYLES
+   ========================================================================== */
+
+.learning-studio-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.studio-header {
+  background: linear-gradient(135deg, var(--bg-card) 0%, #FAF8FF 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.studio-title-group h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px 0;
+}
+
+.studio-title-group p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.studio-material-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studio-material-selector select {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: #FFFFFF;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 240px;
+  cursor: pointer;
+}
+
+.studio-nav-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 2px;
+  overflow-x: auto;
+}
+
+.studio-tab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.studio-tab-item:hover {
+  color: var(--purple-primary);
+  background-color: var(--lavender);
+}
+
+.studio-tab-active {
+  color: var(--purple-primary);
+  background-color: #FFFFFF;
+  border-bottom: 3px solid var(--purple-primary);
+}
+
+/* Studio Tab Content Panel */
+.studio-content-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.studio-empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+}
+
+.studio-empty-state svg {
+  margin-bottom: 12px;
+  color: var(--purple-primary);
+  opacity: 0.7;
+}
+
+.studio-empty-state h3 {
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+/* Summary View Specifics */
+.summary-depth-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.depth-pill-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: #FFFFFF;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.depth-pill-btn.active {
+  background-color: var(--lavender);
+  color: var(--purple-primary);
+  border-color: var(--purple-primary);
+  font-weight: 600;
+}
+
+.summary-section-block {
+  margin-bottom: 24px;
+}
+
+.summary-section-block h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-section-block p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+.summary-points-list {
+  padding-left: 20px;
+  margin: 8px 0 0 0;
+}
+
+.summary-points-list li {
+  color: var(--text-secondary);
+  line-height: 1.55;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.definitions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.definition-item-card {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--cream-warm);
+  border: 1px solid rgba(220, 208, 242, 0.4);
+}
+
+.definition-item-card strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.definition-item-card p {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Mind Map Visual Presentation */
+.mindmap-canvas {
+  padding: 24px;
+  background-color: #FAFAFD;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-color);
+  overflow-x: auto;
+}
+
+.mindmap-root-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--purple-primary);
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 1.05rem;
+  border-radius: 30px;
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.2);
+  margin-bottom: 24px;
+}
+
+.mindmap-branches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.mindmap-branch-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.mindmap-branch-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--purple-primary);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mindmap-subtopics-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.mindmap-subtopic-node {
+  padding: 6px 10px;
+  background-color: var(--bg-main);
+  border-radius: var(--radius-sm);
+  font-size: 0.83rem;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Flowchart Visual Presentation */
+.flowchart-pipeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.flowchart-step-card {
+  width: 100%;
+  padding: 16px 20px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.flowchart-step-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--lavender);
+  color: var(--purple-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.flowchart-step-info h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.flowchart-step-info p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.flowchart-arrow-down {
+  color: var(--purple-primary);
+  opacity: 0.6;
+}
+
+/* Comparison Tables */
+.comparison-table-wrapper {
+  overflow-x: auto;
+  margin-top: 14px;
+}
+
+.custom-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.custom-comparison-table th {
+  background-color: var(--lavender);
+  color: var(--purple-primary);
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 700;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.custom-comparison-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.custom-comparison-table tr:hover td {
+  background-color: #FAFAFD;
+}
+
+/* Flashcards Grid */
+.flashcards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.flashcard-card {
+  perspective: 1000px;
+  min-height: 180px;
+  cursor: pointer;
+}
+
+.flashcard-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.flashcard-inner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+
+.flashcard-prompt-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--purple-primary);
+  letter-spacing: 0.5px;
+}
+
+.flashcard-card-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 12px 0;
+  line-height: 1.45;
+}
+
+.flashcard-flip-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ==========================================================================
+   MODULE THREE & FOUR — PERFORMANCE INTELLIGENCE & ML PREDICTION STYLES
+   ========================================================================== */
+
+.perf-intel-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ml-forecast-hero-card {
+  background: linear-gradient(135deg, #FAF8FF 0%, #F0EEFC 100%);
+  border: 1px solid rgba(108, 92, 231, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(108, 92, 231, 0.06);
+}
+
+.forecast-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.forecast-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background-color: var(--purple-primary);
+  color: #FFFFFF;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.forecast-main-body {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.forecast-score-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 4px solid var(--purple-primary);
+  box-shadow: 0 4px 14px rgba(108, 92, 231, 0.15);
+  flex-shrink: 0;
+}
+
+.forecast-number {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--purple-primary);
+  line-height: 1;
+}
+
+.forecast-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.forecast-insights-col {
+  flex: 1;
+  min-width: 260px;
+}
+
+.forecast-insights-col h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.forecast-insights-col p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+}
+
+.forecast-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.difficulty-radio-group {
+  display: flex;
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 2px;
+}
+
+.diff-radio-btn {
+  padding: 6px 14px;
+  border-radius: 18px;
+  border: none;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.diff-radio-btn.active {
+  background-color: var(--lavender);
+  color: var(--purple-primary);
+}
+
+/* Weak Topics Diagnostic Cards */
+.weak-topics-spotlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.weak-topic-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(255, 118, 117, 0.3);
+  border-left: 4px solid var(--pink-accent);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.weak-topic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.weak-topic-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.weak-topic-accuracy {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background-color: var(--pink-pastel);
+  color: var(--pink-accent);
+}
+
+/* ==========================================================================
+   MODULE FIVE — PERSONALIZED REVISION RECOMMENDATIONS STYLES
+   ========================================================================== */
+
+.recommendations-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.recommendations-header-card {
+  background: linear-gradient(135deg, var(--bg-card) 0%, #F5F3FC 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+}
+
+.recommendations-header-card h1 {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px 0;
+}
+
+.recommendation-action-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.priority-plan-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.priority-plan-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+
+.priority-badge-urgent {
+  background-color: var(--pink-pastel);
+  color: var(--pink-accent);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.priority-badge-standard {
+  background-color: var(--lavender);
+  color: var(--purple-primary);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.plan-info-group {
+  flex: 1;
+  min-width: 280px;
+}
+
+.plan-info-group h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 6px 0 4px 0;
+}
+
+.plan-info-group p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.plan-actions-group {
+  display: flex;
+  gap: 10px;
+}
+
+/* Auth Forgot Password Link */
+.auth-forgot-link {
+  background: none;
+  border: none;
+  color: var(--purple-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+
+.auth-forgot-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}

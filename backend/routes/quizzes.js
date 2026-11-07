@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const mongoose = require("mongoose");
 const { GoogleGenAI } = require("@google/genai");
 const StudyMaterial = require("../models/StudyMaterial");
@@ -187,6 +187,15 @@ function validateGeneratedQuestions(questions, requestedCount, requestedType) {
       }
     }
 
+    const topicName =
+      typeof item.topicName === "string" && item.topicName.trim()
+        ? item.topicName.trim()
+        : "General Concept";
+    const topicId =
+      typeof item.topicId === "string" && item.topicId.trim()
+        ? item.topicId.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_")
+        : topicName.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+
     return {
       question: item.question.trim(),
       options: item.options.map((option) => String(option).trim()),
@@ -194,6 +203,8 @@ function validateGeneratedQuestions(questions, requestedCount, requestedType) {
       explanation:
         typeof item.explanation === "string" ? item.explanation.trim() : "",
       questionType: qType,
+      topicId,
+      topicName,
     };
   });
 }
@@ -213,6 +224,7 @@ router.post("/generate", async (req, res) => {
       questionCount = 5,
       difficulty = "medium",
       questionType = "multiple_choice",
+      selectedTopics = [],
     } = req.body;
 
     if (!materialId || !mongoose.isValidObjectId(materialId)) {
@@ -273,6 +285,11 @@ router.post("/generate", async (req, res) => {
       typeInstruction = `Generate Multiple Choice Questions. Each question must have exactly 4 plausible options. Set "questionType": "multiple_choice".`;
     }
 
+    let topicConstraint = "";
+    if (Array.isArray(selectedTopics) && selectedTopics.length > 0 && !selectedTopics.includes("all")) {
+      topicConstraint = `Focus questions strictly on these selected topics/subsections: ${selectedTopics.join(", ")}.`;
+    }
+
     const prompt = `
 You are an expert educational assessment specialist.
 Create exactly ${count} high-quality questions based ONLY on the study material provided below.
@@ -280,6 +297,7 @@ Create exactly ${count} high-quality questions based ONLY on the study material 
 Difficulty Level: ${normalizedDifficulty.toUpperCase()}
 Question Type Requirement:
 ${typeInstruction}
+${topicConstraint}
 
 Rules:
 - Questions must be factually accurate and strictly derived from the text.
@@ -287,6 +305,7 @@ Rules:
 - Exactly one option must be the correct answer.
 - "correctAnswer" must be a 0-based integer index pointing to the correct choice in the "options" array.
 - Provide a clear, educational explanation for why the correct answer is right.
+- Tag each question with a specific 'topicName' (e.g. 'Photosynthesis Light Reactions') and 'topicId' (e.g. 'photosynthesis_light_reactions') for analytics.
 - Return ONLY valid raw JSON with no Markdown backticks or extra commentary.
 
 Required JSON Structure:
@@ -297,12 +316,12 @@ Required JSON Structure:
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctAnswer": 0,
       "explanation": "Clear explanation of the concept and why Option A is correct.",
-      "questionType": "multiple_choice"
+      "questionType": "multiple_choice",
+      "topicId": "core_topic_id",
+      "topicName": "Human Readable Topic Name"
     }
   ]
-}
-
-Study Material:
+}\n\nStudy Material:
 ${materialText.slice(0, 35000)}
 `;
 
@@ -346,6 +365,8 @@ ${materialText.slice(0, 35000)}
         question: question.question,
         options: question.options,
         questionType: question.questionType,
+        topicId: question.topicId || "general",
+        topicName: question.topicName || "General Concept",
       })),
     });
   } catch (error) {
@@ -457,6 +478,8 @@ router.post("/submit", async (req, res) => {
         isCorrect,
         explanation: question.explanation,
         questionType: question.questionType || "multiple_choice",
+        topicId: question.topicId || "general",
+        topicName: question.topicName || "General Concept",
       };
     });
 
@@ -470,6 +493,31 @@ router.post("/submit", async (req, res) => {
     quiz.autoSubmitted = Boolean(autoSubmit);
     quiz.submittedAt = new Date();
     await quiz.save();
+
+    // Calculate topic-wise performance
+    const topicMap = {};
+    results.forEach((r) => {
+      const tId = r.topicId || "general";
+      const tName = r.topicName || "General Concept";
+      if (!topicMap[tId]) {
+        topicMap[tId] = {
+          topicId: tId,
+          topicName: tName,
+          totalQuestions: 0,
+          correctCount: 0,
+        };
+      }
+      topicMap[tId].totalQuestions += 1;
+      if (r.isCorrect) topicMap[tId].correctCount += 1;
+    });
+
+    const topicPerformance = Object.values(topicMap).map((t) => ({
+      topicId: t.topicId,
+      topicName: t.topicName,
+      totalQuestions: t.totalQuestions,
+      correctCount: t.correctCount,
+      accuracy: Math.round((t.correctCount / t.totalQuestions) * 100),
+    }));
 
     // Persist to QuizAttempt collection associated with current user
     const attempt = await QuizAttempt.create({
@@ -488,6 +536,7 @@ router.post("/submit", async (req, res) => {
       unansweredCount,
       autoSubmitted: Boolean(autoSubmit),
       results,
+      topicPerformance,
     });
 
     return res.json({
@@ -506,6 +555,7 @@ router.post("/submit", async (req, res) => {
       timeTaken: Number(timeTaken) || 0,
       submittedAt: quiz.submittedAt,
       results,
+      topicPerformance,
     });
   } catch (error) {
     console.error("Submit quiz error:", error);
@@ -738,3 +788,4 @@ router.get("/:id", async (req, res) => {
 });
 
 module.exports = router;
+

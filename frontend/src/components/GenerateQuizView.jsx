@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Sparkles,
   BookOpen,
@@ -8,11 +8,13 @@ import {
   HelpCircle,
   Timer,
   Zap,
+  Target,
 } from "lucide-react";
 
 export default function GenerateQuizView({
   materials = [],
   selectedMaterialId = "",
+  preSelectedTopic = "",
   onGenerateQuiz,
   generating = false,
   error = "",
@@ -24,6 +26,23 @@ export default function GenerateQuizView({
   const [questionCount, setQuestionCount] = useState(() => localStorage.getItem("quizcraft_default_count") || "5");
   const [difficulty, setDifficulty] = useState(() => localStorage.getItem("quizcraft_default_difficulty") || "medium");
   const [questionType, setQuestionType] = useState(() => localStorage.getItem("quizcraft_default_type") || "multiple_choice");
+  
+  // Topic Targeting state
+  const [topicScope, setTopicScope] = useState(preSelectedTopic ? "specific" : "all");
+  const [customTopic, setCustomTopic] = useState(preSelectedTopic || "");
+
+  useEffect(() => {
+    if (selectedMaterialId) {
+      setMaterialId(selectedMaterialId);
+    }
+  }, [selectedMaterialId]);
+
+  useEffect(() => {
+    if (preSelectedTopic) {
+      setTopicScope("specific");
+      setCustomTopic(preSelectedTopic);
+    }
+  }, [preSelectedTopic]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -33,6 +52,7 @@ export default function GenerateQuizView({
       questionCount: Number(questionCount),
       difficulty,
       questionType,
+      selectedTopics: topicScope === "specific" && customTopic.trim() ? [customTopic.trim()] : ["all"],
     });
   };
 
@@ -115,10 +135,64 @@ export default function GenerateQuizView({
                 )}
               </div>
 
-              {/* 2. Number of Questions */}
+              {/* 2. Topic Targeting Scope */}
               <div className="form-section">
                 <label className="section-label">
-                  <span className="step-num">2</span> Number of Questions
+                  <span className="step-num">2</span> Focus Scope & Topic Targeting
+                </label>
+                <div className="option-pill-selector" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <button
+                    type="button"
+                    className={`pill-choice-difficulty ${topicScope === "all" ? "pill-choice-selected" : ""}`}
+                    onClick={() => setTopicScope("all")}
+                  >
+                    <strong className="difficulty-title">Entire Document</strong>
+                    <span className="difficulty-desc">Comprehensive test covering all topics</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`pill-choice-difficulty ${topicScope === "specific" ? "pill-choice-selected" : ""}`}
+                    onClick={() => setTopicScope("specific")}
+                  >
+                    <strong className="difficulty-title">Target Specific Topic</strong>
+                    <span className="difficulty-desc">Concentrate on a single concept or weak area</span>
+                  </button>
+                </div>
+
+                {topicScope === "specific" && (
+                  <div className="specific-topic-input-wrapper" style={{ marginTop: "12px" }}>
+                    <label style={{ fontSize: "0.85rem", fontWeight: "600", color: "var(--text-secondary)", display: "block", marginBottom: "6px" }}>
+                      Target Topic / Sub-Concept Name:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Backpropagation, Supervised Learning, Memory Management"
+                      value={customTopic}
+                      onChange={(e) => setCustomTopic(e.target.value)}
+                      className="form-input"
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        borderRadius: "8px",
+                        border: "1px solid var(--border-color)",
+                        fontSize: "0.9rem",
+                        backgroundColor: "var(--bg-main)",
+                        outline: "none"
+                      }}
+                    />
+                    {preSelectedTopic && (
+                      <span style={{ fontSize: "0.8rem", color: "var(--purple-primary)", marginTop: "6px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <Target size={13} /> Pre-filled from Performance Intelligence Weak Topic detection
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Number of Questions */}
+              <div className="form-section">
+                <label className="section-label">
+                  <span className="step-num">3</span> Number of Questions
                 </label>
                 <div className="option-pill-selector">
                   {["5", "10", "15"].map((count) => (
@@ -141,10 +215,10 @@ export default function GenerateQuizView({
                 </div>
               </div>
 
-              {/* 3. Difficulty Level */}
+              {/* 4. Difficulty Level */}
               <div className="form-section">
                 <label className="section-label">
-                  <span className="step-num">3</span> Difficulty Level
+                  <span className="step-num">4</span> Difficulty Level
                 </label>
                 <div className="option-pill-selector">
                   {[
@@ -182,10 +256,10 @@ export default function GenerateQuizView({
                 </div>
               </div>
 
-              {/* 4. Question Type */}
+              {/* 5. Question Type */}
               <div className="form-section">
                 <label className="section-label">
-                  <span className="step-num">4</span> Question Format
+                  <span className="step-num">5</span> Question Format
                 </label>
                 <div className="option-pill-selector">
                   {[
@@ -240,7 +314,9 @@ export default function GenerateQuizView({
                   ) : (
                     <>
                       <Sparkles size={20} />
-                      <span>Generate {questionCount} Questions Now</span>
+                      <span>
+                        Generate {questionCount} Questions {topicScope === "specific" && customTopic.trim() ? `(${customTopic.trim()})` : "Now"}
+                      </span>
                     </>
                   )}
                 </button>
@@ -261,13 +337,16 @@ export default function GenerateQuizView({
                 <strong>1. Context Analysis:</strong> Google Gemini reads the extracted text from your notes or document.
               </li>
               <li>
-                <strong>2. Distractor Generation:</strong> Creates distinct, plausible distractors tailored to your selected difficulty level.
+                <strong>2. Topic Tagging:</strong> Every question is tagged with its topic to fuel your Weak-Topic Detection engine.
               </li>
               <li>
-                <strong>3. Strict Answer Validation:</strong> Correct answers are kept safe on the server until submission.
+                <strong>3. Distractor Generation:</strong> Creates distinct, plausible distractors tailored to your selected difficulty level.
               </li>
               <li>
-                <strong>4. Explanations Included:</strong> Detailed reasoning is given for every question upon completion.
+                <strong>4. Strict Answer Validation:</strong> Correct answers are kept safe on the server until submission.
+              </li>
+              <li>
+                <strong>5. Explanations Included:</strong> Detailed reasoning is given for every question upon completion.
               </li>
             </ul>
           </div>
@@ -278,13 +357,13 @@ export default function GenerateQuizView({
               <h4>Active Session Rules</h4>
             </div>
             <p className="guide-tip">
-              â€¢ Navigate freely between questions before submitting.
+              • Navigate freely between questions before submitting.
             </p>
             <p className="guide-tip">
-              â€¢ Use <strong>Mark for Review</strong> to flag challenging questions.
+              • Use <strong>Mark for Review</strong> to flag challenging questions.
             </p>
             <p className="guide-tip">
-              â€¢ The quiz automatically submits when the countdown timer ends.
+              • The quiz automatically submits when the countdown timer ends.
             </p>
           </div>
         </aside>

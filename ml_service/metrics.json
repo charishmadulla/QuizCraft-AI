@@ -1,0 +1,53 @@
+{
+  "modelVersion": "1.0.0",
+  "bestModel": "XGBoost",
+  "evaluationComparison": {
+    "Baseline_Mean": {
+      "MAE": 12.99,
+      "RMSE": 16.216,
+      "R2": -0.0008
+    },
+    "RandomForest": {
+      "MAE": 5.726,
+      "RMSE": 7.059,
+      "R2": 0.8104
+    },
+    "XGBoost": {
+      "MAE": 5.634,
+      "RMSE": 6.973,
+      "R2": 0.815
+    }
+  },
+  "featureColumns": [
+    "avg_past_score",
+    "recent_score",
+    "attempts_count",
+    "topic_accuracy_avg",
+    "incorrect_rate",
+    "time_per_question",
+    "difficulty_level",
+    "score_trend"
+  ],
+  "featureImportances": {
+    "avg_past_score": 0.1271,
+    "recent_score": 0.0088,
+    "attempts_count": 0.0158,
+    "topic_accuracy_avg": 0.0177,
+    "incorrect_rate": 0.7238,
+    "time_per_question": 0.0076,
+    "difficulty_level": 0.0925,
+    "score_trend": 0.0066
+  },
+  "datasetInfo": {
+    "source": "Simulated cognitive learning trajectories calibrated to student mastery models",
+    "trainStudents": 240,
+    "testStudents": 60,
+    "totalSamples": 2100,
+    "splitStrategy": "GroupShuffleSplit by student_id to prevent data leakage"
+  },
+  "limitations": [
+    "Trained on educational progression models; accuracy improves as more empirical QuizCraft AI student attempts are recorded.",
+    "Requires at least 2 historical quiz attempts for reliable prediction; cold-start behavior triggers when insufficient attempts exist.",
+    "Predictions are probability estimates and do not guarantee future test scores."
+  ]
+}

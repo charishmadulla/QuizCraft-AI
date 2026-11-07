@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
@@ -8,6 +8,10 @@ const materialsRouter = require("./routes/materials");
 const uploadsRouter = require("./routes/uploads");
 const quizzesRouter = require("./routes/quizzes");
 const bookmarksRouter = require("./routes/bookmarks");
+const summariesRouter = require("./routes/summaries");
+const learningRouter = require("./routes/learningStudio");
+const performanceRouter = require("./routes/performance");
+const predictionsRouter = require("./routes/predictions");
 
 const app = express();
 
@@ -28,9 +32,17 @@ app.use("/api/materials", materialsRouter);
 app.use("/api/quizzes", quizzesRouter);
 app.use("/api/bookmarks", bookmarksRouter);
 
+// Smart Learning Studio (Summaries & Visual Learning)
+app.use("/api/summaries", summariesRouter);
+app.use("/api/learning", learningRouter);
+
+// Performance Intelligence & ML Predictions
+app.use("/api/performance", performanceRouter);
+app.use("/api/predictions", predictionsRouter);
+
 app.get("/", (req, res) => {
   res.json({
-    message: "QuizCraft AI API is running with User Authentication!",
+    message: "QuizCraft AI API is running with User Authentication & ML Intelligence!",
     status: "online",
   });
 });

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -11,6 +11,9 @@ import {
   X,
   User as UserIcon,
   LogOut,
+  Lightbulb,
+  TrendingUp,
+  Compass,
 } from "lucide-react";
 
 export default function Sidebar({
@@ -38,11 +41,17 @@ export default function Sidebar({
       badge: materialsCount > 0 ? materialsCount : null,
     },
     {
+      id: "learning-studio",
+      label: "Smart Learning Studio",
+      icon: Lightbulb,
+      badge: "AI",
+      badgeColor: "var(--mint-soft)",
+    },
+    {
       id: "generate",
       label: "Generate Quiz",
       icon: Sparkles,
-      badge: "AI",
-      badgeColor: "var(--lavender)",
+      badge: null,
     },
     {
       id: "history",
@@ -57,9 +66,16 @@ export default function Sidebar({
       badge: bookmarksCount > 0 ? bookmarksCount : null,
     },
     {
-      id: "analytics",
-      label: "Performance Analytics",
-      icon: BarChart3,
+      id: "performance-intelligence",
+      label: "Performance Intelligence",
+      icon: TrendingUp,
+      badge: "ML",
+      badgeColor: "var(--lavender)",
+    },
+    {
+      id: "recommendations",
+      label: "Revision Plans",
+      icon: Compass,
       badge: null,
     },
     {

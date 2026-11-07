@@ -225,4 +225,52 @@ router.put("/profile", protect, async (req, res) => {
   }
 });
 
+// --------------------------------------------------
+// POST /api/auth/reset-password (Recover / Reset Forgotten Password)
+// --------------------------------------------------
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email?.trim() || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide your registered email and a new password.",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters long.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No QuizCraft account found with this email address.",
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "Password reset successfully! You can now sign in with your new password.",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to reset password. Please try again.",
+    });
+  }
+});
+
 module.exports = router;

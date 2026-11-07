@@ -102,6 +102,18 @@ export const updateUserProfile = async (profileData) => {
   }
 };
 
+export const resetPassword = async ({ email, newPassword }) => {
+  try {
+    const response = await api.post("/auth/reset-password", {
+      email,
+      newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    return handleApiError(error);
+  }
+};
+
 // --------------------------------------------------
 // Study materials
 // --------------------------------------------------
@@ -330,3 +342,87 @@ export const removeBookmarkByQuestion = async (question, quizId) => {
 };
 
 export default api;
+
+// --------------------------------------------------
+// Smart Learning Studio (Summaries & Visual Learning)
+// --------------------------------------------------
+
+export const generateSummary = async ({ materialId, summaryLevel = "medium" }) => {
+  const response = await api.post("/summaries/generate", {
+    materialId,
+    summaryLevel,
+  });
+  return response.data;
+};
+
+export const getSummaries = async () => {
+  const response = await api.get("/summaries");
+  return response.data.summaries || [];
+};
+
+export const getSummaryById = async (id) => {
+  const response = await api.get(`/summaries/${id}`);
+  return response.data.summary;
+};
+
+export const deleteSummary = async (id) => {
+  const response = await api.delete(`/summaries/${id}`);
+  return response.data;
+};
+
+export const generateVisualLearning = async ({ materialId }) => {
+  const response = await api.post("/learning/visualize", { materialId });
+  return response.data;
+};
+
+export const generateSimplifiedExplanation = async ({ materialId, topicOrParagraph }) => {
+  const response = await api.post("/learning/simplify", {
+    materialId,
+    topicOrParagraph,
+  });
+  return response.data;
+};
+
+export const getLearningAssets = async (materialId) => {
+  const response = await api.get(`/learning/${materialId}`);
+  return response.data;
+};
+
+// --------------------------------------------------
+// Performance Intelligence & ML Predictions
+// --------------------------------------------------
+
+export const getPerformanceOverview = async () => {
+  const response = await api.get("/performance/overview");
+  return response.data.performance;
+};
+
+export const getPerformanceTopics = async () => {
+  const response = await api.get("/performance/topics");
+  return response.data;
+};
+
+export const getPerformanceHistory = async () => {
+  const response = await api.get("/performance/history");
+  return response.data.progressHistory || [];
+};
+
+export const getRecommendations = async () => {
+  const response = await api.get("/performance/recommendations");
+  return response.data;
+};
+
+export const predictFutureScore = async ({ targetDifficulty = 2 } = {}) => {
+  const response = await api.post("/predictions/predict", { targetDifficulty });
+  return response.data;
+};
+
+export const getLatestPrediction = async () => {
+  const response = await api.get("/predictions/latest");
+  return response.data;
+};
+
+export const getModelInfo = async () => {
+  const response = await api.get("/predictions/model-info");
+  return response.data.modelInfo;
+};

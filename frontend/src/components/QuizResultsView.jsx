@@ -13,6 +13,9 @@ import {
   Check,
   ChevronDown,
   Filter,
+  Target,
+  BookOpen,
+  ArrowRight,
 } from "lucide-react";
 import { generateQuizReportPDF } from "../utils/pdfGenerator";
 
@@ -22,6 +25,8 @@ export default function QuizResultsView({
   onGenerateAnother,
   onBackToDashboard,
   onBookmarkQuestion,
+  onReviseTopic, // (materialId, topicName) => void
+  onTargetTopicQuiz, // (materialId, topicName) => void
   bookmarkedMap = {}, // map of question text -> boolean
 }) {
   const [filterMode, setFilterMode] = useState("all"); // "all", "incorrect", "correct"
@@ -38,7 +43,9 @@ export default function QuizResultsView({
     timeTaken = 0,
     submittedAt = new Date(),
     results = [],
+    topicPerformance = [],
     materialTitle = "Study Material",
+    materialId = "",
   } = resultsData;
 
   const correctCount = results.filter((r) => r.isCorrect).length;
@@ -209,6 +216,140 @@ export default function QuizResultsView({
         </div>
       </section>
 
+      {/* Module 2 & 3: Topic-wise Performance Diagnostic Breakdown */}
+      {topicPerformance && topicPerformance.length > 0 && (
+        <section className="results-topic-breakdown-card" style={{
+          backgroundColor: "var(--bg-card)",
+          borderRadius: "16px",
+          padding: "24px",
+          marginBottom: "28px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          border: "1px solid var(--border-color)"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+            <div>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: "700", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+                <Target size={20} style={{ color: "var(--purple-primary)" }} />
+                Topic-Wise Mastery & Diagnostic Breakdown
+              </h3>
+              <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                Diagnostic analysis feeds your Performance Intelligence and Weak-Topic Detection engine
+              </p>
+            </div>
+            <span style={{
+              fontSize: "0.8rem",
+              padding: "4px 10px",
+              borderRadius: "20px",
+              backgroundColor: "var(--lavender)",
+              color: "var(--purple-primary)",
+              fontWeight: "600"
+            }}>
+              {topicPerformance.length} Topics Assessed
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "14px" }}>
+            {topicPerformance.map((tp, idx) => {
+              const isWeak = tp.accuracy < 60;
+              const isStrong = tp.accuracy >= 75;
+              const statusColor = isStrong ? "var(--mint-accent)" : isWeak ? "var(--pink-accent)" : "var(--peach-accent)";
+              const statusBg = isStrong ? "var(--mint-soft)" : isWeak ? "var(--pink-pastel)" : "var(--cream-warm)";
+
+              return (
+                <div key={idx} style={{
+                  padding: "14px",
+                  borderRadius: "12px",
+                  border: "1px solid var(--border-color)",
+                  backgroundColor: "var(--bg-main)",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between"
+                }}>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                      <strong style={{ fontSize: "0.95rem", color: "var(--text-primary)" }}>{tp.topicName}</strong>
+                      <span style={{
+                        fontSize: "0.75rem",
+                        padding: "2px 8px",
+                        borderRadius: "12px",
+                        backgroundColor: statusBg,
+                        color: statusColor,
+                        fontWeight: "600"
+                      }}>
+                        {tp.accuracy}%
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                      {tp.correctCount} of {tp.totalQuestions} questions correct
+                    </div>
+
+                    {/* Accuracy mini bar */}
+                    <div style={{ width: "100%", height: "6px", backgroundColor: "var(--border-color)", borderRadius: "3px", overflow: "hidden", marginBottom: "12px" }}>
+                      <div style={{
+                        width: `${tp.accuracy}%`,
+                        height: "100%",
+                        backgroundColor: statusColor,
+                        borderRadius: "3px"
+                      }}></div>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div style={{ display: "flex", gap: "8px", marginTop: "auto" }}>
+                    {onReviseTopic && (
+                      <button
+                        type="button"
+                        onClick={() => onReviseTopic(materialId, tp.topicName)}
+                        style={{
+                          flex: 1,
+                          fontSize: "0.75rem",
+                          padding: "6px 8px",
+                          borderRadius: "6px",
+                          border: "1px solid var(--purple-primary)",
+                          backgroundColor: "transparent",
+                          color: "var(--purple-primary)",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px"
+                        }}
+                      >
+                        <BookOpen size={12} /> Revise
+                      </button>
+                    )}
+                    {onTargetTopicQuiz && isWeak && (
+                      <button
+                        type="button"
+                        onClick={() => onTargetTopicQuiz(materialId, tp.topicName)}
+                        style={{
+                          flex: 1,
+                          fontSize: "0.75rem",
+                          padding: "6px 8px",
+                          borderRadius: "6px",
+                          border: "none",
+                          backgroundColor: "var(--pink-pastel)",
+                          color: "var(--pink-accent)",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                          fontWeight: "600"
+                        }}
+                      >
+                        <Target size={12} /> Re-Quiz
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Question Review Section */}
       <section className="results-review-section">
         <div className="review-section-header">
@@ -276,6 +417,19 @@ export default function QuizResultsView({
                       </span>
                     )}
                     <span className="question-index-tag">Question {item.index + 1}</span>
+                    {item.topicName && (
+                      <span style={{
+                        fontSize: "0.75rem",
+                        padding: "2px 8px",
+                        borderRadius: "10px",
+                        backgroundColor: "var(--lavender)",
+                        color: "var(--purple-primary)",
+                        fontWeight: "500",
+                        marginLeft: "6px"
+                      }}>
+                        {item.topicName}
+                      </span>
+                    )}
                   </div>
 
                   <button
