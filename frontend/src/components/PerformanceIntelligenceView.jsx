@@ -30,7 +30,8 @@ export default function PerformanceIntelligenceView({
   onSelectTopicForRevision,
   onShowToast,
 }) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [performance, setPerformance] = useState(null);
 
   // ML Prediction States
@@ -38,37 +39,23 @@ export default function PerformanceIntelligenceView({
   const [predictionData, setPredictionData] = useState(null);
   const [targetDifficulty, setTargetDifficulty] = useState(2); // 1=Easy, 2=Med, 3=Hard
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadData() {
-      setLoading(true);
-      try {
-        const perfData = await getPerformanceOverview();
-        if (isMounted && perfData) {
-          setPerformance(perfData);
-        }
-      } catch (err) {
-        console.warn("Could not load performance overview:", err);
+  // Explicit user-driven performance analysis
+  const handleRunAnalysis = async () => {
+    setLoading(true);
+    try {
+      const perfData = await getPerformanceOverview();
+      if (perfData) {
+        setPerformance(perfData);
+        setHasAnalyzed(true);
+        if (onShowToast) onShowToast("Cognitive performance analysis complete!", "success");
       }
-
-      try {
-        const latestPred = await getLatestPrediction();
-        if (isMounted && latestPred?.prediction) {
-          setPredictionData(latestPred.prediction);
-        }
-      } catch {
-        // No saved prediction yet
-      } finally {
-        if (isMounted) setLoading(false);
-      }
+    } catch (err) {
+      console.warn("Could not load performance overview:", err);
+      if (onShowToast) onShowToast(err.message || "Failed to analyze performance data.", "error");
+    } finally {
+      setLoading(false);
     }
-
-    loadData();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  };
 
   const handleRunPrediction = async () => {
     setPredicting(true);
@@ -87,16 +74,6 @@ export default function PerformanceIntelligenceView({
       setPredicting(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="studio-card-loading" style={{ padding: "80px 20px" }}>
-        <div className="btn-spinner large"></div>
-        <h4>Analyzing Cognitive Mastery & Error Curves...</h4>
-        <p>Evaluating topic-level accuracy across your historical attempts.</p>
-      </div>
-    );
-  }
 
   const hasData = performance && performance.hasData;
 
@@ -117,71 +94,141 @@ export default function PerformanceIntelligenceView({
           </p>
         </div>
 
-        {onNavigateToRecommendations && (
-          <button
-            type="button"
-            className="btn-hero-action"
-            onClick={onNavigateToRecommendations}
-          >
-            <TrendingUp size={16} /> View Revision Roadmap →
-          </button>
-        )}
+        <div className="perf-hero-actions-group" style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+          {hasAnalyzed && (
+            <button
+              type="button"
+              className="btn-toolbar-action"
+              onClick={handleRunAnalysis}
+              disabled={loading}
+              title="Refresh cognitive performance metrics"
+            >
+              <RotateCw size={14} className={loading ? "spin-icon" : ""} />
+              <span>Re-run Diagnostic</span>
+            </button>
+          )}
+          {onNavigateToRecommendations && (
+            <button
+              type="button"
+              className="btn-hero-action"
+              onClick={onNavigateToRecommendations}
+            >
+              <TrendingUp size={16} /> View Revision Roadmap →
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* 4-Column Metric Stat Cards (Matching Dashboard Pastel System) */}
-      <div className="stats-grid">
-        <div className="stat-card" style={{ backgroundColor: "#FFFFFF" }}>
+      {/* Loading state during explicit diagnostic execution */}
+      {loading && (
+        <div className="studio-card-loading" style={{ padding: "80px 20px" }}>
+          <div className="btn-spinner large"></div>
+          <h4>Analyzing Cognitive Mastery & Error Curves...</h4>
+          <p>Evaluating topic-level accuracy across your historical attempts.</p>
+        </div>
+      )}
+
+      {/* Initial state: Waiting for user to click Analyze */}
+      {!hasAnalyzed && !loading && (
+        <div className="studio-prompt-card" style={{ margin: "24px 0", padding: "60px 24px" }}>
           <div
-            className="stat-icon-wrapper"
+            className="prompt-card-icon-wrapper"
             style={{ backgroundColor: "var(--lavender)", color: "var(--purple-primary)" }}
           >
-            <Award size={22} />
+            <Cpu size={36} />
           </div>
-          <div className="stat-content">
-            <span className="stat-label">Overall Average</span>
-            <span className="stat-value">{hasData ? `${performance.averagePercentage}%` : "0%"}</span>
-          </div>
-        </div>
-
-        <div className="stat-card" style={{ backgroundColor: "#FFFFFF" }}>
-          <div
-            className="stat-icon-wrapper"
-            style={{ backgroundColor: "var(--blue-soft)", color: "var(--blue-accent)" }}
+          <h3>Run Performance Intelligence Diagnostic</h3>
+          <p>
+            Analyze your quiz accuracy trajectory, detect weak topics requiring targeted revision, evaluate mastered concepts, and compute test-readiness forecasts using machine learning models.
+          </p>
+          <button
+            type="button"
+            className="btn-primary"
+            style={{ padding: "12px 26px", fontSize: "0.96rem" }}
+            onClick={handleRunAnalysis}
           >
-            <BarChart3 size={22} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-label">Quizzes Completed</span>
-            <span className="stat-value">{hasData ? performance.totalAttempts : 0}</span>
-          </div>
+            <Sparkles size={16} /> Analyze My Performance Now
+          </button>
         </div>
+      )}
 
-        <div className="stat-card" style={{ backgroundColor: "#FFFFFF" }}>
-          <div
-            className="stat-icon-wrapper"
-            style={{ backgroundColor: "var(--mint-soft)", color: "var(--mint-accent)" }}
-          >
-            <CheckCircle2 size={22} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-label">Strong Topics</span>
-            <span className="stat-value">{hasData ? performance.strongTopics?.length || 0 : 0}</span>
+      {/* When analysis has been run */}
+      {hasAnalyzed && !loading && !hasData && (
+        <div className="diagnostic-empty-card neutral-empty" style={{ margin: "30px 0", padding: "40px" }}>
+          <Info size={40} className="icon-blue" />
+          <div>
+            <h3>No Quiz Attempts Recorded Yet</h3>
+            <p>Complete at least one quiz to unlock your cognitive accuracy breakdown, weak topic detection, and ML performance forecast.</p>
+            {onNavigateToQuiz && (
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ marginTop: "16px" }}
+                onClick={() => onNavigateToQuiz()}
+              >
+                <Target size={16} /> Take a Quiz Now
+              </button>
+            )}
           </div>
         </div>
+      )}
 
-        <div className="stat-card" style={{ backgroundColor: "#FFFFFF" }}>
-          <div
-            className="stat-icon-wrapper"
-            style={{ backgroundColor: "var(--pink-pastel)", color: "var(--pink-accent)" }}
-          >
-            <AlertTriangle size={22} />
+      {hasAnalyzed && !loading && hasData && (
+        <>
+          {/* 4-Column Metric Stat Cards (Matching Dashboard Pastel System) */}
+          <div className="stats-grid">
+            <div className="stat-card" style={{ backgroundColor: "#FFFFFF" }}>
+              <div
+                className="stat-icon-wrapper"
+                style={{ backgroundColor: "var(--lavender)", color: "var(--purple-primary)" }}
+              >
+                <Award size={22} />
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Overall Average</span>
+                <span className="stat-value">{performance.averagePercentage}%</span>
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ backgroundColor: "#FFFFFF" }}>
+              <div
+                className="stat-icon-wrapper"
+                style={{ backgroundColor: "var(--blue-soft)", color: "var(--blue-accent)" }}
+              >
+                <BarChart3 size={22} />
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Quizzes Completed</span>
+                <span className="stat-value">{performance.totalAttempts}</span>
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ backgroundColor: "#FFFFFF" }}>
+              <div
+                className="stat-icon-wrapper"
+                style={{ backgroundColor: "var(--mint-soft)", color: "var(--mint-accent)" }}
+              >
+                <CheckCircle2 size={22} />
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Strong Topics</span>
+                <span className="stat-value">{performance.strongTopics?.length || 0}</span>
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ backgroundColor: "#FFFFFF" }}>
+              <div
+                className="stat-icon-wrapper"
+                style={{ backgroundColor: "var(--pink-pastel)", color: "var(--pink-accent)" }}
+              >
+                <AlertTriangle size={22} />
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Weak Topics</span>
+                <span className="stat-value">{performance.weakTopics?.length || 0}</span>
+              </div>
+            </div>
           </div>
-          <div className="stat-content">
-            <span className="stat-label">Weak Topics</span>
-            <span className="stat-value">{hasData ? performance.weakTopics?.length || 0 : 0}</span>
-          </div>
-        </div>
-      </div>
 
       {/* ML Performance Forecast Card (Module 4) */}
       <div className="forecast-panel-card">
@@ -492,6 +539,8 @@ export default function PerformanceIntelligenceView({
             </table>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

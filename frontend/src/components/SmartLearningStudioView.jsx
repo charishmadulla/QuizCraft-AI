@@ -42,10 +42,14 @@ export default function SmartLearningStudioView({
   const [activeSubTab, setActiveSubTab] = useState("summary");
   const [summaryLevel, setSummaryLevel] = useState("medium");
 
-  // Data states
+  // Data states (active in current view)
   const [summaryData, setSummaryData] = useState(null);
   const [simplifiedData, setSimplifiedData] = useState(null);
   const [visualData, setVisualData] = useState(null);
+
+  // Cached saved assets discovered in database (not auto-rendered)
+  const [savedSummary, setSavedSummary] = useState(null);
+  const [savedVisuals, setSavedVisuals] = useState(null);
 
   // Loading & interactive states
   const [loadingAll, setLoadingAll] = useState(false);
@@ -66,50 +70,90 @@ export default function SmartLearningStudioView({
     }
   }, [selectedMaterialId]);
 
-  // Load existing data when active material changes
+  // Check for saved records without auto-rendering them (strict on-demand behavior)
   useEffect(() => {
     if (!currentMaterialId) return;
 
     let isMounted = true;
 
-    // Reset previous material data so old data does not linger
+    // Reset active display so nothing is auto-displayed upon tab or material switch
     setSummaryData(null);
     setSimplifiedData(null);
     setVisualData(null);
+    setSavedSummary(null);
+    setSavedVisuals(null);
     setActiveFlashcardIndex(0);
     setIsFlipped(false);
 
-    async function loadMaterialData() {
+    async function checkSavedRecords() {
       try {
         const assets = await getLearningAssets(currentMaterialId);
         if (isMounted && assets?.hasData) {
-          setVisualData(assets);
-          if (assets.simplifiedExplanation) {
-            setSimplifiedData(assets.simplifiedExplanation);
-          }
+          setSavedVisuals(assets);
         }
       } catch (err) {
-        console.warn("Could not pre-load visual assets:", err);
+        // quiet check
       }
 
       try {
         const sum = await getSummaryById(currentMaterialId);
         if (isMounted && sum) {
-          setSummaryData(sum);
-          if (sum.simplifiedExplanation && !simplifiedData) {
-            setSimplifiedData(sum.simplifiedExplanation);
-          }
+          setSavedSummary(sum);
         }
       } catch {
-        // No existing summary yet
+        // quiet check
       }
     }
 
-    loadMaterialData();
+    checkSavedRecords();
     return () => {
       isMounted = false;
     };
   }, [currentMaterialId]);
+
+  // Explicit user handlers to load saved content from storage
+  const handleLoadSavedSummary = () => {
+    if (savedSummary) {
+      setSummaryData(savedSummary);
+      if (savedSummary.simplifiedExplanation && !simplifiedData) {
+        setSimplifiedData(savedSummary.simplifiedExplanation);
+      }
+      if (onShowToast) onShowToast("Loaded saved structured summary.", "info");
+    }
+  };
+
+  const handleLoadSavedVisuals = () => {
+    if (savedVisuals) {
+      setVisualData(savedVisuals);
+      if (savedVisuals.simplifiedExplanation && !simplifiedData) {
+        setSimplifiedData(savedVisuals.simplifiedExplanation);
+      }
+      if (onShowToast) onShowToast("Loaded saved visual learning assets.", "info");
+    }
+  };
+
+  const handleLoadSavedAll = () => {
+    if (savedSummary) setSummaryData(savedSummary);
+    if (savedVisuals) {
+      setVisualData(savedVisuals);
+      if (savedVisuals.simplifiedExplanation) {
+        setSimplifiedData(savedVisuals.simplifiedExplanation);
+      }
+    }
+    if (onShowToast) onShowToast("Loaded all saved AI study assets from storage.", "info");
+  };
+
+  const hasSavedExplanation = Boolean(
+    savedSummary?.simplifiedExplanation || savedVisuals?.simplifiedExplanation
+  );
+
+  const handleLoadSavedExplanation = () => {
+    const expl = savedSummary?.simplifiedExplanation || savedVisuals?.simplifiedExplanation;
+    if (expl) {
+      setSimplifiedData(expl);
+      if (onShowToast) onShowToast("Loaded saved Feynman explanation.", "info");
+    }
+  };
 
   // Generate All Studio Materials in one go
   const handleGenerateAll = async () => {
@@ -121,9 +165,13 @@ export default function SmartLearningStudioView({
         generateVisualLearning({ materialId: currentMaterialId }),
       ]);
 
-      if (sumRes?.summary) setSummaryData(sumRes.summary);
+      if (sumRes?.summary) {
+        setSummaryData(sumRes.summary);
+        setSavedSummary(sumRes.summary);
+      }
       if (visRes?.data) {
         setVisualData(visRes.data);
+        setSavedVisuals(visRes.data);
         setActiveFlashcardIndex(0);
         setIsFlipped(false);
       }
@@ -151,6 +199,7 @@ export default function SmartLearningStudioView({
       });
       if (res?.summary) {
         setSummaryData(res.summary);
+        setSavedSummary(res.summary);
         if (onShowToast) onShowToast("Structured summary generated successfully!", "success");
       }
     } catch (err) {
@@ -188,6 +237,7 @@ export default function SmartLearningStudioView({
       const res = await generateVisualLearning({ materialId: currentMaterialId });
       if (res?.data) {
         setVisualData(res.data);
+        setSavedVisuals(res.data);
         setActiveFlashcardIndex(0);
         setIsFlipped(false);
         if (onShowToast) onShowToast("Visual learning materials generated!", "success");
@@ -317,6 +367,17 @@ ${summaryData.rawSummary}
               )}
             </button>
 
+            {(savedSummary || savedVisuals) && !hasAnyData && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleLoadSavedAll}
+                title="View previously generated AI assets"
+              >
+                <BookOpen size={15} /> View Saved AI Suite
+              </button>
+            )}
+
             {onGenerateQuizForMaterial && (
               <button
                 type="button"
@@ -415,10 +476,7 @@ ${summaryData.rawSummary}
                     key={lvl}
                     type="button"
                     className={`segmented-pill ${summaryLevel === lvl ? "pill-active" : ""}`}
-                    onClick={() => {
-                      setSummaryLevel(lvl);
-                      handleGenerateSummary(lvl);
-                    }}
+                    onClick={() => setSummaryLevel(lvl)}
                     disabled={loadingSummary}
                   >
                     {lvl.charAt(0).toUpperCase() + lvl.slice(1)}
@@ -474,14 +532,25 @@ ${summaryData.rawSummary}
                 <FileText size={36} />
               </div>
               <h3>Generate Structured AI Summary</h3>
-              <p>Extract core concepts, key definitions, illustrative examples, and grounded conclusions.</p>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => handleGenerateSummary(summaryLevel)}
-              >
-                <Sparkles size={16} /> Generate {summaryLevel.toUpperCase()} Summary Now
-              </button>
+              <p>Extract core concepts, key definitions, illustrative examples, and grounded conclusions from your study material.</p>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => handleGenerateSummary(summaryLevel)}
+                >
+                  <Sparkles size={16} /> {savedSummary ? "Generate Fresh Summary" : `Generate ${summaryLevel.toUpperCase()} Summary Now`}
+                </button>
+                {savedSummary && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleLoadSavedSummary}
+                  >
+                    <BookOpen size={16} /> View Saved Summary
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -630,14 +699,25 @@ ${summaryData.rawSummary}
                 <Lightbulb size={36} />
               </div>
               <h3>Plain Language Learning</h3>
-              <p>Break down intimidating terminology and difficult theories into intuitive mental models.</p>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleGenerateSimplification}
-              >
-                <Sparkles size={16} /> Explain This Material Simply
-              </button>
+              <p>Break down intimidating terminology and difficult theories into intuitive mental models using the Feynman technique.</p>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleGenerateSimplification}
+                >
+                  <Sparkles size={16} /> {hasSavedExplanation ? "Generate Fresh Explanation" : "Explain This Material Simply"}
+                </button>
+                {hasSavedExplanation && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleLoadSavedExplanation}
+                  >
+                    <BookOpen size={16} /> View Saved Explanation
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -725,13 +805,24 @@ ${summaryData.rawSummary}
               </div>
               <h3>Visual Concept Mind Map</h3>
               <p>Generate an interactive conceptual hierarchy branching out from the core theme.</p>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleGenerateVisualLearning}
-              >
-                <Sparkles size={16} /> Generate Mind Map
-              </button>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleGenerateVisualLearning}
+                >
+                  <Sparkles size={16} /> {savedVisuals?.mindMapData ? "Generate Fresh Mind Map" : "Generate Mind Map"}
+                </button>
+                {savedVisuals?.mindMapData && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleLoadSavedVisuals}
+                  >
+                    <BookOpen size={16} /> View Saved Mind Map
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -814,14 +905,25 @@ ${summaryData.rawSummary}
                 <ArrowRight size={36} />
               </div>
               <h3>Sequential Process Flowchart</h3>
-              <p>Convert procedural or chronological ideas into a step-by-step visual pipeline.</p>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleGenerateVisualLearning}
-              >
-                <Sparkles size={16} /> Generate Flowchart
-              </button>
+              <p>Convert workflows, sequential mechanisms, and conditional logic into clear chronological step pipelines.</p>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleGenerateVisualLearning}
+                >
+                  <Sparkles size={16} /> {savedVisuals?.flowchartData ? "Generate Fresh Flowchart" : "Generate Flowchart"}
+                </button>
+                {savedVisuals?.flowchartData && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleLoadSavedVisuals}
+                  >
+                    <BookOpen size={16} /> View Saved Flowchart
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -923,14 +1025,25 @@ ${summaryData.rawSummary}
                 <Table size={36} />
               </div>
               <h3>Concept Comparison Tables</h3>
-              <p>Compare and contrast related ideas, approaches, trade-offs, and alternative methods.</p>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleGenerateVisualLearning}
-              >
-                <Sparkles size={16} /> Generate Comparison Tables
-              </button>
+              <p>Compare and contrast related ideas, approaches, trade-offs, and alternative methods side-by-side.</p>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleGenerateVisualLearning}
+                >
+                  <Sparkles size={16} /> {savedVisuals?.comparisonTables ? "Generate Fresh Tables" : "Generate Comparison Tables"}
+                </button>
+                {savedVisuals?.comparisonTables && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleLoadSavedVisuals}
+                  >
+                    <BookOpen size={16} /> View Saved Comparison Tables
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -1005,13 +1118,24 @@ ${summaryData.rawSummary}
               </div>
               <h3>Data Grounded Visualizations</h3>
               <p>Extract verified numerical statistics and figures into charts with zero hallucinated data.</p>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleGenerateVisualLearning}
-              >
-                <Sparkles size={16} /> Scan & Generate Charts
-              </button>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleGenerateVisualLearning}
+                >
+                  <Sparkles size={16} /> {savedVisuals?.chartsData ? "Generate Fresh Charts" : "Scan & Generate Charts"}
+                </button>
+                {savedVisuals?.chartsData && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleLoadSavedVisuals}
+                  >
+                    <BookOpen size={16} /> View Saved Charts
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -1110,13 +1234,24 @@ ${summaryData.rawSummary}
               </div>
               <h3>Interactive Study Flashcards</h3>
               <p>Generate high-yield question & answer study cards to test active recall.</p>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleGenerateVisualLearning}
-              >
-                <Sparkles size={16} /> Generate Flashcards
-              </button>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleGenerateVisualLearning}
+                >
+                  <Sparkles size={16} /> {savedVisuals?.flashcards?.length ? "Generate Fresh Flashcards" : "Generate Flashcards"}
+                </button>
+                {savedVisuals?.flashcards?.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleLoadSavedVisuals}
+                  >
+                    <BookOpen size={16} /> View Saved Flashcards
+                  </button>
+                )}
+              </div>
             </div>
           )}
 

@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 **/node_modules/
 
@@ -34,3 +34,9 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
